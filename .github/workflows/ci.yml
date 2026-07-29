@@ -33,6 +33,7 @@ jobs:
         run: >-
           pnpm exec supabase start
           --exclude realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor
+          --debug
           --yes
       - name: Lint applied database
         run: pnpm exec supabase db lint --local --level warning --fail-on error
