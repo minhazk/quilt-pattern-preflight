@@ -606,7 +606,7 @@ begin
     (old.status = 'failed' and new.status in ('ready_for_upload', 'processing', 'cancelled'))
   ) then
     raise exception 'invalid_project_transition:%->%', old.status, new.status
-      using errcode = 'check_violation';
+      using errcode = '23514';
   end if;
   return new;
 end
@@ -676,7 +676,7 @@ declare
 begin
   if p_credit_count not in (1, 3) or
      p_amount_minor <> case when p_credit_count = 1 then 2000 else 4900 end then
-    raise exception 'invalid_checkout_product' using errcode = 'check_violation';
+    raise exception 'invalid_checkout_product' using errcode = '23514';
   end if;
 
   insert into public.stripe_events(id, event_type, livemode)
@@ -723,7 +723,7 @@ declare
   available_credits integer;
 begin
   if requesting_owner is null then
-    raise exception 'authentication_required' using errcode = 'insufficient_privilege';
+    raise exception 'authentication_required' using errcode = '42501';
   end if;
 
   -- Serialize consumption per customer so two simultaneous submissions cannot
@@ -737,7 +737,7 @@ begin
       and status = 'ready_for_preflight'
       and deleted_at is null
   ) then
-    raise exception 'project_not_ready' using errcode = 'check_violation';
+    raise exception 'project_not_ready' using errcode = '23514';
   end if;
 
   select coalesce(sum(delta), 0)::integer
@@ -746,7 +746,7 @@ begin
   where owner_id = requesting_owner;
 
   if available_credits < 1 then
-    raise exception 'credit_required' using errcode = 'check_violation';
+    raise exception 'credit_required' using errcode = '23514';
   end if;
 
   insert into public.credits (owner_id, project_id, delta, reason, note)
@@ -781,7 +781,7 @@ declare
 begin
   if char_length(p_key) < 3 or p_limit not between 1 and 1000 or
      p_window_seconds not between 1 and 86400 then
-    raise exception 'invalid_rate_limit_parameters' using errcode = 'invalid_parameter_value';
+    raise exception 'invalid_rate_limit_parameters' using errcode = '22023';
   end if;
   hashed_key := encode(extensions.digest(p_key, 'sha256'), 'hex');
   perform pg_advisory_xact_lock(hashtextextended(hashed_key, 0));
