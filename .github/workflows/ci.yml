@@ -30,15 +30,7 @@ jobs:
       - run: .venv/bin/pip install -e 'services/preflight[dev]'
       - run: pnpm check
       - name: Apply clean Supabase migration
-        run: >-
-          pnpm exec supabase --debug start
-          --exclude realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor
-          --yes
-      - name: Print database logs after migration failure
-        if: failure()
-        run: |
-          docker ps --all --format '{{.Names}}'
-          docker logs supabase_db_quilt-pattern-preflight
+        run: pnpm exec supabase --debug db start
       - name: Lint applied database
         run: pnpm exec supabase db lint --local --level warning --fail-on error
       - name: Verify row-level isolation
