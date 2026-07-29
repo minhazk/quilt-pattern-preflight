@@ -674,8 +674,9 @@ as $$
 declare
   created_payment_id uuid;
 begin
-  if p_credit_count not in (1, 3) or
-     p_amount_minor <> case when p_credit_count = 1 then 2000 else 4900 end then
+  if p_credit_count not in (1, 3)
+     or (p_credit_count = 1 and p_amount_minor <> 2000)
+     or (p_credit_count = 3 and p_amount_minor <> 4900) then
     raise exception 'invalid_checkout_product' using errcode = '23514';
   end if;
 
