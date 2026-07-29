@@ -29,3 +29,20 @@ def test_preflight_and_pdf_report(pattern: PatternModel) -> None:
     assert pattern.title in text
     assert "PIECE_COUNT_RECONCILIATION" in text
     assert len(reader.pages) >= 2
+
+
+def test_approved_report_uses_persisted_result(pattern: PatternModel) -> None:
+    client = TestClient(app)
+    model = pattern.model_dump(mode="json")
+    result = client.post("/v1/preflight", json=model).json()
+    result["findings"][0]["title"] = "Operator-approved wording"
+
+    report = client.post(
+        "/v1/approved-report.pdf",
+        json={"model": model, "result": result},
+    )
+
+    assert report.status_code == 200
+    reader = PdfReader(BytesIO(report.content))
+    text = "\n".join(page.extract_text() or "" for page in reader.pages)
+    assert "Operator-approved wording" in text

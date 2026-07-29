@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI, File, Header, HTTPException, UploadFile
 from fastapi.responses import Response
 
 from .extraction import ExtractionError, extract_document
-from .models import ExtractionResult, PatternModel, PreflightResult
+from .models import ApprovedReportRequest, ExtractionResult, PatternModel, PreflightResult
 from .reports import generate_report_pdf
 from .rules import run_preflight
 
@@ -58,6 +58,20 @@ def preflight(model: PatternModel) -> PreflightResult:
 def report(model: PatternModel) -> Response:
     result = run_preflight(model)
     content = generate_report_pdf(model, result)
+    return Response(
+        content,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": 'attachment; filename="preflight-report.pdf"',
+            "Cache-Control": "private, no-store",
+        },
+    )
+
+
+@app.post("/v1/approved-report.pdf", dependencies=[Depends(require_service_secret)])
+def approved_report(payload: ApprovedReportRequest) -> Response:
+    """Render the persisted operator-approved snapshot without rerunning rules."""
+    content = generate_report_pdf(payload.model, payload.result)
     return Response(
         content,
         media_type="application/pdf",

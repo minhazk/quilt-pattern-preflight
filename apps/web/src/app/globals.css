@@ -287,6 +287,7 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(216,154,67,.
 .beta-callout > span { font-size: 34px; color: var(--rust); }
 .beta-callout p { margin: 4px 0 0; color: var(--ink-soft); font-size: 11px; }
 .stepper { display: grid; grid-template-columns: repeat(5, 1fr); padding: 0; margin: 0 0 24px; list-style: none; }
+.stepper.four-steps { grid-template-columns: repeat(4, 1fr); }
 .stepper li { position: relative; color: #89928c; font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
 .stepper li::before { content: ""; position: absolute; left: 17px; right: -10px; top: 15px; height: 1px; background: #cad0cb; }
 .stepper li:last-child::before { display: none; }
@@ -295,6 +296,8 @@ input:focus, select:focus, textarea:focus { outline: 3px solid rgba(216,154,67,.
 .stepper li.active span { color: white; background: var(--forest); }
 .wizard-card, .settings-card { padding: 46px; background: var(--paper); border: 1px solid var(--line); }
 .wizard-card > h2, .settings-card h2 { margin: 0 0 28px; font-size: 38px; }
+.wizard-card section > h2 { margin: 0 0 28px; font-size: 38px; }
+.wizard-card section > label:not(.upload-zone) { display: block; margin-top: 18px; }
 .wizard-card > label:not(.upload-zone) { display: block; margin-top: 18px; }
 .upload-zone { min-height: 220px; display: grid; place-items: center; align-content: center; gap: 8px; border: 1px dashed var(--forest); background: var(--mint); text-align: center; cursor: pointer; }
 .upload-zone strong { font-family: var(--font-display), serif; font-size: 24px; }
@@ -310,6 +313,11 @@ fieldset input[type="checkbox"] { width: 18px; min-height: 18px; }
 .entity-table > div { min-width: 640px; display: grid; grid-template-columns: 1.4fr 1.2fr .7fr .7fr; align-items: center; gap: 10px; padding: 9px; border-bottom: 1px solid var(--line); }
 .entity-table input { min-height: 38px; }
 .entity-table span { font-size: 10px; }
+.confirmation-table > div { grid-template-columns: 45px 100px 1fr 110px; }
+.confirmation-table > div:not(:first-child) { align-items: start; }
+.confirmation-table input[type="checkbox"] { width: 18px; min-height: 18px; }
+.confirmation-table blockquote { grid-column: 3 / -1; margin: 0; color: var(--ink-soft); font-family: Georgia, serif; font-size: 10px; font-style: italic; }
+.form-section-label { margin-top: 48px; }
 .submit-summary { display: grid; grid-template-columns: repeat(3, 1fr); margin-block: 25px; border: 1px solid var(--line); }
 .submit-summary div { padding: 18px; }
 .submit-summary div + div { border-left: 1px solid var(--line); }
@@ -324,6 +332,42 @@ fieldset input[type="checkbox"] { width: 18px; min-height: 18px; }
 .pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
 .pricing-grid .settings-card { margin: 0; }
 .pricing-grid form { margin-top: 24px; }
+.report-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+.revision-summary { margin-bottom: 24px; padding: 32px; background: var(--paper); border-left: 4px solid var(--gold); }
+.revision-summary h2 { margin: 0; }
+.revision-summary .severity-counts { grid-template-columns: repeat(3, 1fr); }
+.finding-response { display: grid; grid-template-columns: 1fr auto auto; align-items: end; gap: 10px; margin-top: -1px; padding: 18px 24px; background: var(--mint); border: 1px solid var(--line); }
+.finding-response label { display: grid; gap: 5px; }
+.feedback-form > label { display: grid; gap: 5px; margin-top: 20px; }
+.document-retention { display: flex; justify-content: space-between; align-items: center; gap: 24px; margin-bottom: 24px; padding: 24px; background: #f5e7df; border-left: 4px solid var(--rust); }
+.document-retention p { margin: 5px 0 0; color: var(--ink-soft); font-size: 11px; }
+.empty-state { padding: 40px; color: var(--ink-soft); background: var(--paper); border: 1px dashed var(--line); text-align: center; }
+
+/* Operator quality control */
+.admin-shell { min-height: 100vh; background: #edf0eb; }
+.admin-shell > header { min-height: 74px; display: flex; align-items: center; gap: 30px; padding-inline: 32px; color: white; background: #18251e; }
+.admin-shell > header .logo { color: white; }
+.admin-shell > header nav { display: flex; gap: 20px; font-size: 11px; }
+.admin-shell > header > span { margin-left: auto; color: #bdcbc2; font-size: 10px; }
+.admin-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; margin-bottom: 38px; background: var(--line); border: 1px solid var(--line); }
+.admin-metrics article { min-height: 120px; padding: 20px; background: white; }
+.admin-metrics span, .admin-metrics small { display: block; color: var(--ink-soft); font-size: 9px; }
+.admin-metrics span { text-transform: uppercase; letter-spacing: .08em; }
+.admin-metrics strong { display: block; margin-block: 12px 6px; font-family: var(--font-display), serif; font-size: 32px; }
+.model-json { overflow-x: auto; padding: 18px; color: #dce8df; background: #18251e; font-size: 11px; }
+.operator-entities, .operator-findings { display: grid; gap: 10px; }
+.operator-entities article { padding: 16px; background: var(--cream); }
+.operator-entities span, .operator-entities strong { display: block; }
+.operator-entities span { color: var(--ink-soft); font-size: 9px; text-transform: uppercase; }
+.operator-entities blockquote, .operator-findings blockquote { margin: 8px 0 0; padding-left: 12px; border-left: 2px solid var(--gold); font-family: Georgia, serif; font-size: 11px; font-style: italic; }
+.operator-findings > article { padding: 22px; border: 1px solid var(--line); }
+.operator-findings header { display: flex; align-items: center; gap: 12px; }
+.operator-findings header small { margin-left: auto; color: var(--ink-soft); }
+.operator-findings code { display: block; padding: 10px; color: white; background: var(--forest); }
+.operator-action-form { display: grid; grid-template-columns: 1fr auto auto; align-items: end; gap: 10px; margin-top: 18px; }
+.operator-manual-form, .operator-review-form { display: grid; gap: 16px; }
+.operator-manual-form > label, .operator-review-form > label { display: grid; gap: 5px; }
+.operator-buttons { display: flex; flex-wrap: wrap; gap: 10px; }
 
 /* Policies */
 .policy-page { min-height: 100vh; background: var(--cream); }

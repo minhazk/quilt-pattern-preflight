@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EventBeacon } from "@/components/event-beacon";
 import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
@@ -23,6 +24,7 @@ const faqs = [
 export default function HomePage() {
   return (
     <>
+      <EventBeacon event="landing_page_viewed" />
       <SiteHeader />
       <main>
         <section className="hero">

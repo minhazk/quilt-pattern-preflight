@@ -169,3 +169,10 @@ class ExtractionResult(BaseModel):
     plain_text_length: int
     entities: list[ExtractedEntity]
     warnings: list[str] = Field(default_factory=list)
+
+
+class ApprovedReportRequest(BaseModel):
+    """A persisted, operator-approved result ready for PDF rendering."""
+
+    model: PatternModel
+    result: PreflightResult

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { FindingCard } from "@/components/finding-card";
+import { EventBeacon } from "@/components/event-beacon";
 import { Logo } from "@/components/logo";
 import {
   sampleAssumptions,
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
 export default function DemoPage() {
   return (
     <main className="report-page">
+      <EventBeacon event="sample_report_viewed" />
       <header className="report-nav">
         <div className="container">
           <Logo />

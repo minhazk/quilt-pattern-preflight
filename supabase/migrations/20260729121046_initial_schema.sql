@@ -126,6 +126,9 @@ create table public.document_versions (
   sha256 text not null check (sha256 ~ '^[a-f0-9]{64}$'),
   page_count integer check (page_count > 0),
   text_layer_available boolean,
+  confirmed_model jsonb,
+  preflight_metadata jsonb,
+  comparison_result jsonb,
   extraction_status public.job_status not null default 'queued',
   review_status public.review_status not null default 'not_started',
   raw_file_delete_after timestamptz not null,
@@ -681,6 +684,59 @@ grant execute on function public.fulfill_stripe_checkout(
   text, text, boolean, uuid, text, text, integer, integer
 ) to service_role;
 
+create or replace function public.consume_project_credit(p_project_id uuid)
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  requesting_owner uuid := auth.uid();
+  available_credits integer;
+begin
+  if requesting_owner is null then
+    raise exception 'authentication_required' using errcode = 'insufficient_privilege';
+  end if;
+
+  -- Serialize consumption per customer so two simultaneous submissions cannot
+  -- spend the same remaining credit.
+  perform pg_advisory_xact_lock(hashtextextended(requesting_owner::text, 0));
+
+  if not exists (
+    select 1 from public.projects
+    where id = p_project_id
+      and owner_id = requesting_owner
+      and status = 'ready_for_preflight'
+      and deleted_at is null
+  ) then
+    raise exception 'project_not_ready' using errcode = 'check_violation';
+  end if;
+
+  select coalesce(sum(delta), 0)::integer
+  into available_credits
+  from public.credits
+  where owner_id = requesting_owner;
+
+  if available_credits < 1 then
+    raise exception 'credit_required' using errcode = 'check_violation';
+  end if;
+
+  insert into public.credits (owner_id, project_id, delta, reason, note)
+  values (
+    requesting_owner, p_project_id, -1, 'project_consumption',
+    'Consumed atomically when the confirmed model entered preflight'
+  );
+
+  update public.projects
+  set status = 'processing', credit_consumed_at = now()
+  where id = p_project_id;
+
+  return available_credits - 1;
+end
+$$;
+revoke all on function public.consume_project_credit(uuid) from public, anon;
+grant execute on function public.consume_project_credit(uuid) to authenticated;
+
 create or replace view public.credit_balances
 with (security_invoker = true)
 as
@@ -985,4 +1041,13 @@ insert into public.rule_versions (
     'No calculation run',
     'The safe result for excluded scope is no inferred result.',
     array['Informational only']
+  ),
+  (
+    'OPERATOR_MANUAL_REVIEW', '1.0.0', 'Operator manual review',
+    'Records a source-linked issue identified during disclosed beta quality control.',
+    array['operator-reviewed supported scope'],
+    array['operator reviewed the cited source and confirmed the issue'],
+    'Operator-declared issue; no automated formula',
+    'Some document contradictions require an explicit human source review.',
+    array['Manual findings are not evidence of automated-rule precision']
   );

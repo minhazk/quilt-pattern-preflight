@@ -39,6 +39,9 @@ export default async function DashboardLayout({
           <Link href="/demo">Sample report</Link>
           <Link href="/dashboard/credits">Credits</Link>
           <Link href="/dashboard/settings">Privacy & settings</Link>
+          {(user.role === "operator" || user.role === "admin") && (
+            <Link href="/admin">Operator quality control</Link>
+          )}
         </nav>
         <div className="credit-chip">
           <span>Pattern credits</span>
