@@ -1,7 +1,8 @@
 import { cache } from "react";
 import { redirect } from "next/navigation";
-import { hasSupabaseEnvironment, isLocalSampleMode } from "@/lib/env";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { hasNeonEnvironment, isLocalSampleMode } from "@/lib/env";
+import { neonAuth } from "@/lib/neon/auth";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export type AppUser = {
   id: string;
@@ -22,31 +23,29 @@ export const getCurrentUser = cache(async (): Promise<AppUser | null> => {
     return sampleUser;
   }
 
-  if (!hasSupabaseEnvironment()) {
+  if (!hasNeonEnvironment()) {
     return null;
   }
 
-  const supabase = await createServerSupabaseClient();
-  const { data, error } = await supabase.auth.getClaims();
-  const claims = data?.claims;
-
-  if (error || !claims?.sub) {
+  const { data: session, error } = await neonAuth.getSession();
+  if (error || !session?.user?.id) {
     return null;
   }
 
-  const appMetadata =
-    typeof claims.app_metadata === "object" && claims.app_metadata
-      ? claims.app_metadata
-      : {};
+  const neon = await createServerNeonClient();
+  const { data: profile } = await neon
+    .from("profiles")
+    .select("role")
+    .eq("id", session.user.id)
+    .maybeSingle();
   const role =
-    "role" in appMetadata &&
-    (appMetadata.role === "operator" || appMetadata.role === "admin")
-      ? appMetadata.role
+    profile?.role === "operator" || profile?.role === "admin"
+      ? profile.role
       : "customer";
 
   return {
-    id: claims.sub,
-    email: typeof claims.email === "string" ? claims.email : "",
+    id: session.user.id,
+    email: session.user.email,
     role,
     sample: false,
   };

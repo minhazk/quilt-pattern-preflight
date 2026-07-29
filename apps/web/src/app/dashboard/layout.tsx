@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import { requireUser } from "@/lib/auth";
-import { hasSupabaseEnvironment } from "@/lib/env";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { hasNeonEnvironment } from "@/lib/env";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export default async function DashboardLayout({
   children,
@@ -12,8 +12,8 @@ export default async function DashboardLayout({
   const user = await requireUser();
   let credits = user.sample ? 1 : 0;
 
-  if (!user.sample && hasSupabaseEnvironment()) {
-    const supabase = await createServerSupabaseClient();
+  if (!user.sample && hasNeonEnvironment()) {
+    const supabase = await createServerNeonClient();
     const { data } = await supabase
       .from("credit_balances")
       .select("balance")

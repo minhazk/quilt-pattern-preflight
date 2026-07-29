@@ -1,12 +1,13 @@
--- Quilt Pattern Preflight: paid validation pilot
+-- Quilt Pattern Preflight: Neon-backed paid validation pilot
 -- All public tables have RLS enabled. Customer document content is never stored
 -- in analytics or ordinary application logs.
 
+create schema if not exists extensions;
 create extension if not exists pgcrypto with schema extensions;
 
 create schema if not exists private;
-revoke all on schema private from public, anon, authenticated;
-grant usage on schema private to service_role;
+revoke all on schema private from public, anonymous, authenticated;
+grant usage on schema private to neondb_owner;
 
 create table private.rate_limit_windows (
   bucket_hash text primary key,
@@ -87,7 +88,7 @@ create type public.acquisition_source_type as enum (
 );
 
 create table public.profiles (
-  id uuid primary key references auth.users(id) on delete cascade,
+  id uuid primary key references neon_auth.user(id) on delete cascade,
   email text not null,
   display_name text,
   role public.app_role not null default 'customer',
@@ -107,20 +108,20 @@ begin
   values (
     new.id,
     coalesce(new.email, ''),
-    nullif(new.raw_user_meta_data ->> 'display_name', '')
+    nullif(new.name, '')
   )
   on conflict (id) do update set email = excluded.email;
   return new;
 end
 $$;
 
-create trigger auth_user_created_profile
-after insert or update of email on auth.users
+create trigger neon_auth_user_created_profile
+after insert or update of email on neon_auth.user
 for each row execute function private.create_customer_profile();
 
 create table public.acquisition_sources (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   source public.acquisition_source_type not null,
   detail text check (char_length(detail) <= 500),
   qualified_prospect boolean not null default false,
@@ -129,7 +130,7 @@ create table public.acquisition_sources (
 
 create table public.projects (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   acquisition_source_id uuid references public.acquisition_sources(id) on delete set null,
   title text not null check (char_length(title) between 1 and 200),
   status public.project_status not null default 'draft',
@@ -152,6 +153,7 @@ create table public.document_versions (
   size_bytes bigint not null check (size_bytes between 1 and 15728640),
   mime_type text not null,
   sha256 text not null check (sha256 ~ '^[a-f0-9]{64}$'),
+  raw_file bytea,
   page_count integer check (page_count > 0),
   text_layer_available boolean,
   confirmed_model jsonb,
@@ -211,7 +213,7 @@ create table public.assumptions (
   document_version_id uuid not null references public.document_versions(id) on delete cascade,
   version integer not null check (version > 0),
   values jsonb not null,
-  confirmed_by uuid references auth.users(id) on delete set null,
+  confirmed_by uuid references neon_auth.user(id) on delete set null,
   confirmed_at timestamptz,
   created_at timestamptz not null default now(),
   unique (document_version_id, version)
@@ -339,7 +341,7 @@ create table public.finding_sources (
 create table public.operator_reviews (
   id uuid primary key default gen_random_uuid(),
   document_version_id uuid not null unique references public.document_versions(id) on delete cascade,
-  reviewer_id uuid references auth.users(id) on delete set null,
+  reviewer_id uuid references neon_auth.user(id) on delete set null,
   status public.review_status not null default 'not_started',
   started_at timestamptz,
   completed_at timestamptz,
@@ -355,7 +357,7 @@ create table public.operator_reviews (
 
 create table public.operator_audit_events (
   id bigint generated always as identity primary key,
-  actor_id uuid references auth.users(id) on delete set null,
+  actor_id uuid references neon_auth.user(id) on delete set null,
   project_id uuid references public.projects(id) on delete set null,
   document_version_id uuid references public.document_versions(id) on delete set null,
   action text not null,
@@ -368,19 +370,19 @@ create table public.operator_audit_events (
 
 create table public.credits (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   project_id uuid references public.projects(id) on delete set null,
   delta integer not null check (delta <> 0),
   reason public.credit_reason not null,
   payment_id uuid,
   note text,
-  created_by uuid references auth.users(id) on delete set null,
+  created_by uuid references neon_auth.user(id) on delete set null,
   created_at timestamptz not null default now()
 );
 
 create table public.payments (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   stripe_checkout_session_id text not null unique,
   stripe_payment_intent_id text unique,
   amount_minor integer not null check (amount_minor >= 0),
@@ -415,7 +417,7 @@ create table public.stripe_events (
 create table public.customer_feedback (
   id uuid primary key default gen_random_uuid(),
   project_id uuid not null references public.projects(id) on delete cascade,
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   issue_found boolean,
   minutes_saved integer check (minutes_saved between 0 and 1440),
   unhelpful_findings text,
@@ -430,7 +432,7 @@ create table public.customer_feedback (
 
 create table public.analytics_events (
   id bigint generated always as identity primary key,
-  owner_id uuid references auth.users(id) on delete set null,
+  owner_id uuid references neon_auth.user(id) on delete set null,
   project_id uuid references public.projects(id) on delete set null,
   anonymous_id uuid,
   event_name text not null,
@@ -450,7 +452,7 @@ create table public.analytics_events (
 
 create table public.consent_records (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   project_id uuid references public.projects(id) on delete cascade,
   consent_type text not null,
   granted boolean not null,
@@ -461,7 +463,7 @@ create table public.consent_records (
 
 create table public.deletion_requests (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   project_id uuid references public.projects(id) on delete cascade,
   request_type text not null check (request_type in ('project', 'account', 'raw_file')),
   status public.job_status not null default 'queued',
@@ -471,7 +473,7 @@ create table public.deletion_requests (
 
 create table public.email_outbox (
   id uuid primary key default gen_random_uuid(),
-  owner_id uuid not null references auth.users(id) on delete cascade,
+  owner_id uuid not null references neon_auth.user(id) on delete cascade,
   template text not null,
   payload jsonb not null,
   idempotency_key text not null unique,
@@ -496,16 +498,68 @@ create index payments_owner_created_idx on public.payments(owner_id, created_at)
 create index analytics_event_time_idx on public.analytics_events(event_name, occurred_at);
 create index feedback_pay_again_idx on public.customer_feedback(would_pay_again, submitted_at);
 
-create or replace function private.is_operator()
-returns boolean
+create or replace function private.enforce_document_storage_budget()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  active_bytes bigint;
+  max_active_bytes constant bigint := 209715200;
+begin
+  if new.raw_file_deleted_at is null then
+    if new.raw_file is null then
+      raise exception 'raw_file_required' using errcode = '23514';
+    end if;
+    if octet_length(new.raw_file) <> new.size_bytes then
+      raise exception 'raw_file_size_mismatch' using errcode = '23514';
+    end if;
+  elsif new.raw_file is not null then
+    raise exception 'deleted_raw_file_must_be_empty' using errcode = '23514';
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('document_storage_budget', 0));
+  select coalesce(sum(octet_length(raw_file)), 0)
+  into active_bytes
+  from public.document_versions
+  where raw_file_deleted_at is null
+    and id <> new.id;
+
+  if active_bytes + coalesce(octet_length(new.raw_file), 0) > max_active_bytes then
+    raise exception 'free_storage_budget_exhausted' using errcode = '53100';
+  end if;
+  return new;
+end
+$$;
+
+create trigger document_versions_enforce_storage_budget
+before insert or update of raw_file, raw_file_deleted_at, size_bytes
+on public.document_versions
+for each row execute function private.enforce_document_storage_budget();
+
+create or replace function private.current_user_id()
+returns uuid
 language sql
 stable
 security invoker
 set search_path = ''
 as $$
-  select coalesce(
-    (auth.jwt() -> 'app_metadata' ->> 'role') in ('operator', 'admin'),
-    false
+  select nullif(auth.user_id(), '')::uuid
+$$;
+
+create or replace function private.is_operator()
+returns boolean
+language sql
+stable
+security definer
+set search_path = ''
+as $$
+  select exists (
+    select 1
+    from neon_auth.user
+    where id = private.current_user_id()
+      and role in ('operator', 'admin')
   )
 $$;
 
@@ -513,17 +567,21 @@ create or replace function private.is_admin()
 returns boolean
 language sql
 stable
-security invoker
+security definer
 set search_path = ''
 as $$
-  select coalesce(
-    (auth.jwt() -> 'app_metadata' ->> 'role') = 'admin',
-    false
+  select exists (
+    select 1
+    from neon_auth.user
+    where id = private.current_user_id()
+      and role = 'admin'
   )
 $$;
 
-grant execute on function private.is_operator() to authenticated, service_role;
-grant execute on function private.is_admin() to authenticated, service_role;
+grant execute on function private.current_user_id() to authenticated;
+grant execute on function private.is_operator() to authenticated;
+grant execute on function private.is_admin() to authenticated;
+grant usage on schema private to authenticated;
 
 create or replace function private.owns_project(target_project_id uuid)
 returns boolean
@@ -535,11 +593,11 @@ as $$
   select exists (
     select 1 from public.projects
     where id = target_project_id
-      and owner_id = (select auth.uid())
+      and owner_id = private.current_user_id()
       and deleted_at is null
   )
 $$;
-grant execute on function private.owns_project(uuid) to authenticated, service_role;
+grant execute on function private.owns_project(uuid) to authenticated;
 
 create or replace function private.owns_document(target_document_id uuid)
 returns boolean
@@ -553,11 +611,11 @@ as $$
     from public.document_versions d
     join public.projects p on p.id = d.project_id
     where d.id = target_document_id
-      and p.owner_id = (select auth.uid())
+      and p.owner_id = private.current_user_id()
       and p.deleted_at is null
   )
 $$;
-grant execute on function private.owns_document(uuid) to authenticated, service_role;
+grant execute on function private.owns_document(uuid) to authenticated;
 
 create or replace function private.touch_updated_at()
 returns trigger
@@ -633,7 +691,7 @@ begin
     actor_id, project_id, document_version_id, action,
     entity_type, entity_id, before_value, after_value
   ) values (
-    auth.uid(), target_project_id, target_document_id, tg_op,
+    private.current_user_id(), target_project_id, target_document_id, tg_op,
     tg_table_name, coalesce(new.id, old.id)::text,
     case when tg_op in ('UPDATE', 'DELETE') then to_jsonb(old) end,
     case when tg_op in ('INSERT', 'UPDATE') then to_jsonb(new) end
@@ -708,10 +766,7 @@ end
 $$;
 revoke all on function public.fulfill_stripe_checkout(
   text, text, boolean, uuid, text, text, integer, integer
-) from public, anon, authenticated;
-grant execute on function public.fulfill_stripe_checkout(
-  text, text, boolean, uuid, text, text, integer, integer
-) to service_role;
+) from public, anonymous, authenticated;
 
 create or replace function public.consume_project_credit(p_project_id uuid)
 returns integer
@@ -720,7 +775,7 @@ security definer
 set search_path = ''
 as $$
 declare
-  requesting_owner uuid := auth.uid();
+  requesting_owner uuid := private.current_user_id();
   available_credits integer;
 begin
   if requesting_owner is null then
@@ -763,7 +818,7 @@ begin
   return available_credits - 1;
 end
 $$;
-revoke all on function public.consume_project_credit(uuid) from public, anon;
+revoke all on function public.consume_project_credit(uuid) from public, anonymous;
 grant execute on function public.consume_project_credit(uuid) to authenticated;
 
 create or replace function public.check_rate_limit(
@@ -813,7 +868,7 @@ end
 $$;
 revoke all on function public.check_rate_limit(text, integer, integer) from public;
 grant execute on function public.check_rate_limit(text, integer, integer)
-  to anon, authenticated, service_role;
+  to anonymous, authenticated;
 
 create or replace view public.credit_balances
 with (security_invoker = true)
@@ -863,22 +918,22 @@ alter table public.deletion_requests enable row level security;
 alter table public.email_outbox enable row level security;
 
 create policy profiles_read_own on public.profiles for select to authenticated
-using ((select auth.uid()) = id or private.is_operator());
+using (private.current_user_id() = id or private.is_operator());
 create policy profiles_update_own on public.profiles for update to authenticated
-using ((select auth.uid()) = id)
-with check ((select auth.uid()) = id and role = 'customer');
+using (private.current_user_id() = id)
+with check (private.current_user_id() = id and role = 'customer');
 
 create policy acquisition_owner_all on public.acquisition_sources for all to authenticated
-using ((select auth.uid()) = owner_id or private.is_operator())
-with check ((select auth.uid()) = owner_id or private.is_operator());
+using (private.current_user_id() = owner_id or private.is_operator())
+with check (private.current_user_id() = owner_id or private.is_operator());
 
 create policy projects_read on public.projects for select to authenticated
-using (((select auth.uid()) = owner_id and deleted_at is null) or private.is_operator());
+using ((private.current_user_id() = owner_id and deleted_at is null) or private.is_operator());
 create policy projects_insert on public.projects for insert to authenticated
-with check ((select auth.uid()) = owner_id);
+with check (private.current_user_id() = owner_id);
 create policy projects_update on public.projects for update to authenticated
-using (((select auth.uid()) = owner_id and deleted_at is null) or private.is_operator())
-with check ((select auth.uid()) = owner_id or private.is_operator());
+using ((private.current_user_id() = owner_id and deleted_at is null) or private.is_operator())
+with check (private.current_user_id() = owner_id or private.is_operator());
 
 create policy documents_read on public.document_versions for select to authenticated
 using (private.owns_project(project_id) or private.is_operator());
@@ -890,21 +945,21 @@ with check (private.owns_project(project_id) or private.is_operator());
 
 create policy uploads_read on public.uploads for select to authenticated
 using (private.owns_document(document_version_id) or private.is_operator());
-create policy uploads_operator_write on public.uploads for all to authenticated
-using (private.is_operator()) with check (private.is_operator());
+create policy uploads_owner_insert on public.uploads for insert to authenticated
+with check (private.owns_document(document_version_id) or private.is_operator());
 
 create policy jobs_read on public.extraction_jobs for select to authenticated
 using (private.owns_document(document_version_id) or private.is_operator());
-create policy jobs_operator_write on public.extraction_jobs for all to authenticated
-using (private.is_operator()) with check (private.is_operator());
+create policy jobs_owner_insert on public.extraction_jobs for insert to authenticated
+with check (private.owns_document(document_version_id) or private.is_operator());
 
 create policy entities_read on public.extracted_entities for select to authenticated
 using (private.owns_document(document_version_id) or private.is_operator());
 create policy entities_confirm on public.extracted_entities for update to authenticated
 using (private.owns_document(document_version_id) or private.is_operator())
 with check (private.owns_document(document_version_id) or private.is_operator());
-create policy entities_operator_insert on public.extracted_entities for insert to authenticated
-with check (private.is_operator());
+create policy entities_owner_insert on public.extracted_entities for insert to authenticated
+with check (private.owns_document(document_version_id) or private.is_operator());
 
 create policy assumptions_read on public.assumptions for select to authenticated
 using (private.owns_document(document_version_id) or private.is_operator());
@@ -942,6 +997,11 @@ with check (
   private.owns_document(document_version_id)
   and status in ('customer_accepted', 'customer_disputed')
 );
+create policy findings_owner_automated_insert on public.findings for insert to authenticated
+with check (
+  private.owns_document(document_version_id)
+  and status = 'automated'
+);
 create policy findings_operator_all on public.findings for all to authenticated
 using (private.is_operator()) with check (private.is_operator());
 
@@ -956,6 +1016,16 @@ using (
 );
 create policy finding_sources_operator_write on public.finding_sources for all to authenticated
 using (private.is_operator()) with check (private.is_operator());
+create policy finding_sources_owner_insert on public.finding_sources for insert to authenticated
+with check (
+  exists (
+    select 1
+    from public.findings f
+    where f.id = finding_id
+      and private.owns_document(f.document_version_id)
+      and f.status = 'automated'
+  )
+);
 
 create policy reviews_customer_read on public.operator_reviews for select to authenticated
 using (
@@ -964,85 +1034,54 @@ using (
 );
 create policy reviews_operator_all on public.operator_reviews for all to authenticated
 using (private.is_operator()) with check (private.is_operator());
+create policy reviews_owner_insert on public.operator_reviews for insert to authenticated
+with check (
+  private.owns_document(document_version_id)
+  and status = 'not_started'
+);
 
 create policy audit_operator_read on public.operator_audit_events for select to authenticated
 using (private.is_operator());
 create policy audit_operator_insert on public.operator_audit_events for insert to authenticated
-with check (private.is_operator() and actor_id = (select auth.uid()));
+with check (private.is_operator() and actor_id = private.current_user_id());
 
 create policy credits_read_own on public.credits for select to authenticated
-using ((select auth.uid()) = owner_id or private.is_operator());
+using (private.current_user_id() = owner_id or private.is_operator());
 create policy payments_read_own on public.payments for select to authenticated
-using ((select auth.uid()) = owner_id or private.is_operator());
+using (private.current_user_id() = owner_id or private.is_operator());
 create policy refunds_read on public.refunds for select to authenticated
 using (
   exists (
     select 1 from public.payments p
     where p.id = payment_id
-      and (p.owner_id = (select auth.uid()) or private.is_operator())
+      and (p.owner_id = private.current_user_id() or private.is_operator())
   )
 );
 
 create policy feedback_owner_all on public.customer_feedback for all to authenticated
-using ((select auth.uid()) = owner_id or private.is_operator())
-with check ((select auth.uid()) = owner_id);
+using (private.current_user_id() = owner_id or private.is_operator())
+with check (private.current_user_id() = owner_id);
 
-create policy analytics_insert on public.analytics_events for insert to anon, authenticated
-with check (owner_id is null or owner_id = (select auth.uid()));
+create policy analytics_insert on public.analytics_events for insert to anonymous, authenticated
+with check (owner_id is null or owner_id = private.current_user_id());
 create policy analytics_operator_read on public.analytics_events for select to authenticated
 using (private.is_operator());
 
 create policy consent_owner_all on public.consent_records for all to authenticated
-using ((select auth.uid()) = owner_id or private.is_operator())
-with check ((select auth.uid()) = owner_id);
+using (private.current_user_id() = owner_id or private.is_operator())
+with check (private.current_user_id() = owner_id);
 create policy deletion_owner_all on public.deletion_requests for all to authenticated
-using ((select auth.uid()) = owner_id or private.is_operator())
-with check ((select auth.uid()) = owner_id);
+using (private.current_user_id() = owner_id or private.is_operator())
+with check (private.current_user_id() = owner_id);
 create policy outbox_operator_read on public.email_outbox for select to authenticated
 using (private.is_operator());
+create policy outbox_owner_insert on public.email_outbox for insert to authenticated
+with check (private.current_user_id() = owner_id);
 
-grant usage on schema public to anon, authenticated;
+grant usage on schema public to anonymous, authenticated;
 grant select, insert, update, delete on all tables in schema public to authenticated;
-grant insert on public.analytics_events to anon;
+grant insert on public.analytics_events to anonymous;
 grant usage, select on all sequences in schema public to authenticated;
-
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values (
-  'pattern-documents',
-  'pattern-documents',
-  false,
-  15728640,
-  array[
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-  ]
-)
-on conflict (id) do update set
-  public = excluded.public,
-  file_size_limit = excluded.file_size_limit,
-  allowed_mime_types = excluded.allowed_mime_types;
-
-create policy storage_customer_insert on storage.objects for insert to authenticated
-with check (
-  bucket_id = 'pattern-documents'
-  and (storage.foldername(name))[1] = (select auth.uid())::text
-);
-create policy storage_customer_read on storage.objects for select to authenticated
-using (
-  bucket_id = 'pattern-documents'
-  and (
-    (storage.foldername(name))[1] = (select auth.uid())::text
-    or private.is_operator()
-  )
-);
-create policy storage_customer_delete on storage.objects for delete to authenticated
-using (
-  bucket_id = 'pattern-documents'
-  and (
-    (storage.foldername(name))[1] = (select auth.uid())::text
-    or private.is_operator()
-  )
-);
 
 insert into public.rule_versions (
   id, version, name, description, supported_constructions,

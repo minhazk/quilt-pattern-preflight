@@ -1,18 +1,14 @@
 # Deployment
 
-Use separate staging and production Supabase and Stripe projects.
+Use separate Neon branches and Stripe sandbox/live environments.
 
-## 1. Supabase
+## 1. Neon
 
-1. Create the project and record URL, publishable key and secret key.
-2. Link the CLI: `pnpm exec supabase link --project-ref <ref>`.
-3. Review the pending migration: `pnpm exec supabase db push --dry-run`.
-4. Apply it: `pnpm exec supabase db push`.
-5. Run database lint/advisors and verify all tables and Storage objects retain
-   RLS/private access.
-6. Configure Auth site URL and callback
-   `https://<web-host>/auth/callback`.
-7. Set an operator’s Auth `app_metadata.role` to `operator`; use `admin` only
+1. Create the project and enable Neon Auth and Data API.
+2. Apply `neon/migrations/0001_initial.sql` to an isolated branch.
+3. Verify table count, RLS policies, grants, rules and storage trigger.
+4. Apply the same forward migration to the empty production branch.
+5. Set an operator’s protected profile role to `operator`; use `admin` only
    for refund/credit administration.
 
 Do not reset or clear a shared database. Apply forward migrations.
@@ -41,13 +37,15 @@ second credit is created.
 
 Do not enable live mode until the full paid flow and refund procedure pass.
 
-## 4. Vercel web
+## 4. Cloudflare web
 
 Set root directory to `apps/web` and install/build commands to:
 
 ```text
 pnpm install --frozen-lockfile
-pnpm --filter @preflight/web build
+pnpm --filter @preflight/web build:cloudflare
+pnpm --filter @preflight/web exec wrangler deploy --dry-run
+pnpm --filter @preflight/web exec wrangler deploy
 ```
 
 Set all variables from `.env.example`; crucially:
@@ -62,7 +60,7 @@ Never expose variables without `NEXT_PUBLIC_`.
 
 ## 5. Release verification
 
-- Magic link and callback
+- Password sign-up/sign-in
 - Cross-user project denial
 - £20 and £49 signed checkout fulfilment and replay
 - DOCX and text-layer PDF upload/extraction

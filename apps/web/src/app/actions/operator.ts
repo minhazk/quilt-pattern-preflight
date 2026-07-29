@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireOperator } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 import { sendReportReadyEmail } from "@/lib/email";
 
 const findingDecisionSchema = z.object({
@@ -16,7 +16,7 @@ const findingDecisionSchema = z.object({
 export async function decideFinding(formData: FormData) {
   await requireOperator();
   const values = findingDecisionSchema.parse(Object.fromEntries(formData));
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { error } = await supabase
     .from("findings")
     .update({
@@ -46,7 +46,7 @@ export async function addManualFinding(formData: FormData) {
     ...raw,
     sourcePage: raw.sourcePage || undefined,
   });
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: finding, error } = await supabase
     .from("findings")
     .insert({
@@ -96,7 +96,7 @@ const projectActionSchema = z.object({
 export async function updateOperatorReview(formData: FormData) {
   const operator = await requireOperator();
   const values = projectActionSchema.parse(Object.fromEntries(formData));
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const now = new Date();
 
   if (values.action === "start") {

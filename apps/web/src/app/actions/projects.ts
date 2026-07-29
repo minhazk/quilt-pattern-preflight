@@ -12,8 +12,8 @@ import {
   type PatternModelPayload,
 } from "@/lib/preflight-client";
 import { compareFindings } from "@/lib/revision";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createActionNeonClient } from "@/lib/neon/admin";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 const MAX_UPLOAD_BYTES = 15 * 1024 * 1024;
 const acceptedFiles = {
@@ -67,7 +67,7 @@ export async function createProjectUpload(formData: FormData) {
 
   const values = uploadSchema.parse(Object.fromEntries(formData));
   const file = validateFile(formData.get("patternFile"));
-  const rateLimitClient = createAdminSupabaseClient();
+  const rateLimitClient = await createActionNeonClient();
   const { data: uploadAllowed } = await rateLimitClient.rpc(
     "check_rate_limit",
     {
@@ -89,9 +89,8 @@ export async function createProjectUpload(formData: FormData) {
       Number(process.env.RAW_FILE_RETENTION_DAYS ?? "30"),
   );
 
-  const admin = createAdminSupabaseClient();
+  const admin = await createActionNeonClient();
   let projectId: string | null = null;
-  let uploaded = false;
 
   try {
     const { data: source, error: sourceError } = await admin
@@ -120,15 +119,6 @@ export async function createProjectUpload(formData: FormData) {
       .eq("id", projectId);
     if (extractingError) throw extractingError;
 
-    const { data: storageObject, error: storageError } = await admin.storage
-      .from("pattern-documents")
-      .upload(storagePath, bytes, {
-        contentType: file.type,
-        upsert: false,
-      });
-    if (storageError) throw storageError;
-    uploaded = true;
-
     const { data: document, error: documentError } = await admin
       .from("document_versions")
       .insert({
@@ -140,6 +130,7 @@ export async function createProjectUpload(formData: FormData) {
         size_bytes: file.size,
         mime_type: file.type,
         sha256,
+        raw_file: `\\x${bytes.toString("hex")}`,
         page_count: extraction.page_count,
         text_layer_available: extraction.text_layer_available,
         extraction_status: "succeeded",
@@ -190,7 +181,7 @@ export async function createProjectUpload(formData: FormData) {
     const writes = await Promise.all([
       admin.from("uploads").insert({
         document_version_id: document.id,
-        storage_object_id: storageObject.id ?? null,
+        storage_object_id: null,
         validation_result: {
           page_count: extraction.page_count,
           text_layer_available: extraction.text_layer_available,
@@ -231,9 +222,6 @@ export async function createProjectUpload(formData: FormData) {
       .eq("id", projectId);
     if (readyError) throw readyError;
   } catch (error) {
-    if (uploaded) {
-      await admin.storage.from("pattern-documents").remove([storagePath]);
-    }
     if (projectId) {
       await admin
         .from("projects")
@@ -255,7 +243,7 @@ export async function uploadRevision(formData: FormData) {
   if (user.sample) redirect("/demo");
   const projectId = z.string().uuid().parse(formData.get("projectId"));
   const file = validateFile(formData.get("patternFile"));
-  const admin = createAdminSupabaseClient();
+  const admin = await createActionNeonClient();
   const { data: uploadAllowed } = await admin.rpc("check_rate_limit", {
     p_key: `upload:${user.id}`,
     p_limit: 10,
@@ -289,23 +277,12 @@ export async function uploadRevision(formData: FormData) {
     deleteAfter.getUTCDate() +
       Number(process.env.RAW_FILE_RETENTION_DAYS ?? "30"),
   );
-  let uploaded = false;
-
   try {
     const { error: processingError } = await admin
       .from("projects")
       .update({ status: "revision_processing" })
       .eq("id", project.id);
     if (processingError) throw processingError;
-
-    const { data: storageObject, error: storageError } = await admin.storage
-      .from("pattern-documents")
-      .upload(storagePath, bytes, {
-        contentType: file.type,
-        upsert: false,
-      });
-    if (storageError) throw storageError;
-    uploaded = true;
 
     const { data: document, error: documentError } = await admin
       .from("document_versions")
@@ -318,6 +295,7 @@ export async function uploadRevision(formData: FormData) {
         size_bytes: file.size,
         mime_type: file.type,
         sha256,
+        raw_file: `\\x${bytes.toString("hex")}`,
         page_count: extraction.page_count,
         text_layer_available: extraction.text_layer_available,
         extraction_status: "succeeded",
@@ -362,7 +340,7 @@ export async function uploadRevision(formData: FormData) {
         : Promise.resolve({ error: null }),
       admin.from("uploads").insert({
         document_version_id: document.id,
-        storage_object_id: storageObject.id ?? null,
+        storage_object_id: null,
         validation_result: {
           page_count: extraction.page_count,
           text_layer_available: extraction.text_layer_available,
@@ -403,9 +381,6 @@ export async function uploadRevision(formData: FormData) {
       .eq("id", project.id);
     if (readyError) throw readyError;
   } catch (error) {
-    if (uploaded) {
-      await admin.storage.from("pattern-documents").remove([storagePath]);
-    }
     await admin
       .from("projects")
       .update({ status: "failed" })
@@ -514,7 +489,7 @@ export async function confirmAndSubmitPreflight(formData: FormData) {
         allowance: stringEntries(formData, "fabricAllowance")[index] || "0",
       })),
     );
-  const admin = createAdminSupabaseClient();
+  const admin = await createActionNeonClient();
 
   const { data: project, error: projectError } = await admin
     .from("projects")
@@ -630,7 +605,7 @@ export async function confirmAndSubmitPreflight(formData: FormData) {
   if (readyError) throw new Error("Project could not enter preflight");
 
   if (document.version_number === 1) {
-    const userSupabase = await createServerSupabaseClient();
+    const userSupabase = await createServerNeonClient();
     const { error: creditError } = await userSupabase.rpc(
       "consume_project_credit",
       { p_project_id: project.id },

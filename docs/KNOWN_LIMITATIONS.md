@@ -4,10 +4,10 @@
 - The initial migration, database lint and RLS isolation tests pass against a
   clean Postgres 17 service in CI, but could not be run locally on the build Mac
   because Docker/Podman was absent.
-- Stripe account credentials were unavailable, so signed test checkout and
-  replay are implemented/tested at boundaries but not exercised against the
-  founder’s Stripe account.
-- Supabase, Vercel and a Python host are not yet connected or deployed.
+- Stripe is connected to live mode only; no live resources were created.
+  Sandbox checkout and replay still require a sandbox plugin connection.
+- Neon and the Cloudflare web Worker are deployed. The Python computation
+  Worker is not yet deployed.
 - Report-ready email is sent inline through Resend when configured and retained
   in an idempotent outbox; it does not yet have a separate retry worker.
 - Account deletion is queued for an operator; project/raw deletion is immediate.

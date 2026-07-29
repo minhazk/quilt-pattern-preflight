@@ -1,33 +1,44 @@
 import { z } from "zod";
 
-const publicSupabaseSchema = z.object({
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z.string().min(1),
+const publicNeonSchema = z.object({
+  NEXT_PUBLIC_NEON_AUTH_URL: z.string().url(),
+  NEXT_PUBLIC_NEON_DATA_API_URL: z.string().url(),
 });
 
-const privateSupabaseSchema = publicSupabaseSchema.extend({
-  SUPABASE_SECRET_KEY: z.string().min(1),
+const neonAuthSchema = z.object({
+  NEON_AUTH_BASE_URL: z.string().url(),
+  NEON_AUTH_COOKIE_SECRET: z.string().min(32),
 });
 
-export function hasSupabaseEnvironment(): boolean {
+const privateNeonSchema = publicNeonSchema.merge(neonAuthSchema).extend({
+  DATABASE_URL: z.string().url(),
+});
+
+export function hasNeonEnvironment(): boolean {
   return Boolean(
-    process.env.NEXT_PUBLIC_SUPABASE_URL &&
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+    process.env.NEXT_PUBLIC_NEON_AUTH_URL &&
+    process.env.NEXT_PUBLIC_NEON_DATA_API_URL &&
+    process.env.NEON_AUTH_BASE_URL &&
+    process.env.NEON_AUTH_COOKIE_SECRET,
   );
 }
 
-export function getPublicSupabaseEnvironment() {
-  return publicSupabaseSchema.parse(process.env);
+export function getPublicNeonEnvironment() {
+  return publicNeonSchema.parse(process.env);
 }
 
-export function getPrivateSupabaseEnvironment() {
-  return privateSupabaseSchema.parse(process.env);
+export function getNeonAuthEnvironment() {
+  return neonAuthSchema.parse(process.env);
+}
+
+export function getPrivateNeonEnvironment() {
+  return privateNeonSchema.parse(process.env);
 }
 
 export function isLocalSampleMode(): boolean {
   return (
     process.env.NODE_ENV !== "production" &&
     process.env.DEV_AUTH_ENABLED !== "false" &&
-    !hasSupabaseEnvironment()
+    !hasNeonEnvironment()
   );
 }

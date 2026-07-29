@@ -5,7 +5,7 @@ import {
   updateOperatorReview,
 } from "@/app/actions/operator";
 import { requireOperator } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export default async function OperatorProjectPage({
   params,
@@ -15,7 +15,7 @@ export default async function OperatorProjectPage({
   const operator = await requireOperator();
   if (operator.sample) notFound();
   const { projectId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: project } = await supabase
     .from("projects")
     .select("id, title, status, owner_id")

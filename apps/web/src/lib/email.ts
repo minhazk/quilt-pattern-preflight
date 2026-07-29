@@ -1,11 +1,11 @@
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { createActionNeonClient } from "@/lib/neon/admin";
 
 export async function sendReportReadyEmail(input: {
   ownerId: string;
   projectId: string;
   projectTitle: string;
 }) {
-  const admin = createAdminSupabaseClient();
+  const admin = await createActionNeonClient();
   const idempotencyKey = `report-ready:${input.projectId}`;
   const { data: existing } = await admin
     .from("email_outbox")

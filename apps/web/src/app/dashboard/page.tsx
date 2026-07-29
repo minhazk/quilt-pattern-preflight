@@ -1,7 +1,7 @@
 import type { Route } from "next";
 import Link from "next/link";
 import { requireUser } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export default async function DashboardPage() {
   const user = await requireUser();
@@ -32,7 +32,7 @@ export default async function DashboardPage() {
     );
   }
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: projects } = await supabase
     .from("projects")
     .select(

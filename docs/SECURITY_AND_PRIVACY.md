@@ -4,15 +4,15 @@ Customer manuscripts are unpublished commercial intellectual property.
 
 ## Implemented controls
 
-- Passwordless Supabase Auth with request-scoped, refresh-safe clients
+- Neon Auth with request-scoped Data API clients
 - RLS on every public table; ownership helpers for projects/documents
-- Operator/admin authority from signed `app_metadata`, never profile fields
-- Private Storage bucket, 15 MB limit, MIME allowlist and owner-path policies
+- Operator/admin authority from protected database records
+- Private Postgres file storage, 15 MB per-file limit and 200 MiB total hard cap
 - Extension and MIME agreement, random paths, SHA-256 metadata and text-layer
   validation
 - 30-day raw-file deadline, immediate raw deletion, permanent project deletion,
   and queued account deletion
-- HTTPS-dependent providers, no public raw-object URLs
+- HTTPS-dependent providers and no public raw-file URLs
 - No document text, excerpts, filenames or measurements in analytics
 - No document contents in application error messages or ordinary logs
 - Deterministic calculation path; optional LLM extraction is disabled and
@@ -28,16 +28,15 @@ Customer manuscripts are unpublished commercial intellectual property.
 
 - Keep service-role, Stripe and preflight service secrets server-only.
 - Rotate secrets after any suspected exposure.
-- Set production Storage retention/lifecycle automation and monitor deletion
-  jobs.
+- Monitor file-retention deletion jobs and the hard storage budget.
 - Review operator access quarterly and remove stale roles.
-- Use separate Stripe test/live and Supabase staging/production projects.
+- Use separate Stripe sandbox/live environments and Neon branches.
 - Never place customer excerpts in support tickets.
 
 ## Known gaps before live production
 
-The migration must be executed in the target Supabase project and advisors
-reviewed. Rate limits are fixed-window MVP limits, not an edge WAF. Account
+Stripe sandbox checkout and the Python service must be verified end to end.
+Rate limits are fixed-window MVP limits, not an edge WAF. Account
 deletion is queued for operator handling because financial obligations may
 remain. A production incident-response and data-processing agreement review is
 still required.

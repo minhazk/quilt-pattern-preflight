@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { uploadRevision } from "@/app/actions/projects";
 import { requireUser } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export default async function RevisionUploadPage({
   params,
@@ -11,7 +11,7 @@ export default async function RevisionUploadPage({
   const user = await requireUser();
   if (user.sample) notFound();
   const { projectId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: project } = await supabase
     .from("projects")
     .select("id, title, status, revision_deadline, revision_used_at")

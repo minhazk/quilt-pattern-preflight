@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { confirmAndSubmitPreflight } from "@/app/actions/projects";
 import { requireUser } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 import { ModelFields } from "@/app/dashboard/projects/[projectId]/confirm/model-fields";
 
 function splitDimension(value: string | undefined): [string, string] {
@@ -17,7 +17,7 @@ export default async function ConfirmExtractionPage({
   const user = await requireUser();
   if (user.sample) notFound();
   const { projectId } = await params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: project } = await supabase
     .from("projects")
     .select("id, title, status")

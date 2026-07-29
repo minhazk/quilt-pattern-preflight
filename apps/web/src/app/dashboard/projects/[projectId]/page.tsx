@@ -7,7 +7,7 @@ import {
 } from "@/app/actions/customer";
 import { FindingCard } from "@/components/finding-card";
 import { requireUser } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export default async function ProjectReportPage({
   params,
@@ -20,7 +20,7 @@ export default async function ProjectReportPage({
   if (user.sample) notFound();
   const { projectId } = await params;
   const query = await searchParams;
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: project } = await supabase
     .from("projects")
     .select("id, title, status, revision_deadline")

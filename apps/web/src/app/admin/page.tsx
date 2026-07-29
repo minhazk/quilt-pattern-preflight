@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireOperator } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export default async function AdminQueuePage() {
   const operator = await requireOperator();
@@ -12,8 +12,8 @@ export default async function AdminQueuePage() {
             <p className="eyebrow">Operator quality control</p>
             <h1>Review queue</h1>
             <p>
-              Connect local Supabase and sign in with operator app metadata to
-              exercise the persistent queue.
+              Connect a Neon branch and sign in with a protected operator role
+              to exercise the persistent queue.
             </p>
           </div>
         </div>
@@ -31,7 +31,7 @@ export default async function AdminQueuePage() {
     );
   }
 
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const [{ data: documents }, { data: funnel }, { data: feedback }] =
     await Promise.all([
       supabase

@@ -11,10 +11,10 @@ export default function PrivacyPage() {
       </p>
       <h2>How pattern documents are handled</h2>
       <p>
-        Documents are held in private object storage and retrieved through
-        short-lived signed links. Authorised beta operators may access a
-        document only to review extraction and findings. Operator access is
-        recorded.
+        Documents are held privately in the application database behind
+        row-level access controls and a hard storage ceiling. Authorised beta
+        operators may access a document only to review extraction and findings.
+        Operator access is recorded.
       </p>
       <h2>No model training</h2>
       <p>

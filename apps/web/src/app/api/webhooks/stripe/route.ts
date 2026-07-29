@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { verifyCompletedCheckout } from "@/lib/billing";
 import { createStripeClient } from "@/lib/stripe";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { createPrivilegedSql } from "@/lib/neon/sql";
 
 export const runtime = "nodejs";
 
@@ -11,21 +11,19 @@ async function fulfillCheckout(
   session: Stripe.Checkout.Session,
 ) {
   const checkout = verifyCompletedCheckout(session);
-  const supabase = createAdminSupabaseClient();
-  const { error } = await supabase.rpc("fulfill_stripe_checkout", {
-    p_event_id: event.id,
-    p_event_type: event.type,
-    p_livemode: event.livemode,
-    p_owner_id: checkout.ownerId,
-    p_checkout_session_id: checkout.checkoutSessionId,
-    p_payment_intent_id: checkout.paymentIntentId,
-    p_amount_minor: checkout.amountMinor,
-    p_credit_count: checkout.creditCount,
-  });
-
-  if (error) {
-    throw new Error(`Credit fulfillment failed: ${error.code}`);
-  }
+  const sql = createPrivilegedSql();
+  await sql`
+    select public.fulfill_stripe_checkout(
+      ${event.id},
+      ${event.type},
+      ${event.livemode},
+      ${checkout.ownerId}::uuid,
+      ${checkout.checkoutSessionId},
+      ${checkout.paymentIntentId},
+      ${checkout.amountMinor},
+      ${checkout.creditCount}
+    )
+  `;
 }
 
 export async function POST(request: Request) {

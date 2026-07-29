@@ -1,17 +1,22 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import type { Route } from "next";
 import { z } from "zod";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { neonAuth } from "@/lib/neon/auth";
 
-const magicLinkSchema = z.object({
+const credentialsSchema = z.object({
   email: z.string().email(),
+  password: z.string().min(8).max(128),
+  mode: z.enum(["sign-in", "sign-up"]),
   next: z.string().startsWith("/dashboard"),
 });
 
-export async function sendMagicLink(formData: FormData) {
-  const values = magicLinkSchema.safeParse({
+export async function authenticate(formData: FormData) {
+  const values = credentialsSchema.safeParse({
     email: formData.get("email"),
+    password: formData.get("password"),
+    mode: formData.get("mode"),
     next: formData.get("next"),
   });
 
@@ -19,21 +24,23 @@ export async function sendMagicLink(formData: FormData) {
     redirect("/auth/sign-in?error=invalid");
   }
 
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const supabase = await createServerSupabaseClient();
-  const callback = new URL("/auth/callback", appUrl);
-  callback.searchParams.set("next", values.data.next);
-  const { error } = await supabase.auth.signInWithOtp({
+  const credentials = {
     email: values.data.email,
-    options: {
-      emailRedirectTo: callback.toString(),
-      shouldCreateUser: true,
-    },
-  });
+    password: values.data.password,
+  };
+  const result =
+    values.data.mode === "sign-up"
+      ? await neonAuth.signUp.email({
+          ...credentials,
+          name: values.data.email.split("@")[0] ?? "Quilt designer",
+        })
+      : await neonAuth.signIn.email(credentials);
 
-  if (error) {
-    redirect("/auth/sign-in?error=delivery");
+  if (result.error) {
+    redirect(
+      `/auth/sign-in?error=${values.data.mode === "sign-up" ? "signup" : "signin"}`,
+    );
   }
 
-  redirect("/auth/check-email");
+  redirect(values.data.next as Route);
 }

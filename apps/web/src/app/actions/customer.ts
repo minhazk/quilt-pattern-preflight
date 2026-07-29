@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { createAdminSupabaseClient } from "@/lib/supabase/admin";
+import { createServerNeonClient } from "@/lib/neon/server";
+import { createActionNeonClient } from "@/lib/neon/admin";
 
 const findingResponseSchema = z.object({
   projectId: z.string().uuid(),
@@ -17,7 +17,7 @@ const findingResponseSchema = z.object({
 export async function respondToFinding(formData: FormData) {
   await requireUser();
   const values = findingResponseSchema.parse(Object.fromEntries(formData));
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { error } = await supabase
     .from("findings")
     .update({
@@ -44,7 +44,7 @@ const feedbackSchema = z.object({
 export async function submitFeedback(formData: FormData) {
   const user = await requireUser();
   const values = feedbackSchema.parse(Object.fromEntries(formData));
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { error } = await supabase.from("customer_feedback").insert({
     project_id: values.projectId,
     owner_id: user.id,
@@ -81,23 +81,20 @@ export async function deleteRawDocument(formData: FormData) {
   const user = await requireUser();
   const documentId = z.string().uuid().parse(formData.get("documentId"));
   const projectId = z.string().uuid().parse(formData.get("projectId"));
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: document, error: readError } = await supabase
     .from("document_versions")
-    .select("id, storage_path, raw_file_deleted_at")
+    .select("id, raw_file_deleted_at")
     .eq("id", documentId)
     .single();
   if (readError || !document) throw new Error("Document was not found");
   if (!document.raw_file_deleted_at) {
-    const { error: storageError } = await supabase.storage
-      .from("pattern-documents")
-      .remove([document.storage_path]);
-    if (storageError) {
-      throw new Error(`Raw file deletion failed: ${storageError.message}`);
-    }
     const { error: updateError } = await supabase
       .from("document_versions")
-      .update({ raw_file_deleted_at: new Date().toISOString() })
+      .update({
+        raw_file: null,
+        raw_file_deleted_at: new Date().toISOString(),
+      })
       .eq("id", document.id);
     if (updateError) throw new Error("Deletion status could not be recorded");
   }
@@ -115,7 +112,7 @@ export async function deleteProject(formData: FormData) {
   const user = await requireUser();
   const projectId = z.string().uuid().parse(formData.get("projectId"));
   const confirmation = z.string().trim().parse(formData.get("confirmation"));
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: project, error: projectError } = await supabase
     .from("projects")
     .select("id, title")
@@ -126,24 +123,26 @@ export async function deleteProject(formData: FormData) {
   }
   const { data: documents, error: documentsError } = await supabase
     .from("document_versions")
-    .select("storage_path, raw_file_deleted_at")
+    .select("id, raw_file_deleted_at")
     .eq("project_id", project.id);
   if (documentsError) throw new Error("Project documents could not be listed");
-  const paths = (documents ?? [])
+  const activeDocumentIds = (documents ?? [])
     .filter((document) => !document.raw_file_deleted_at)
-    .map((document) => document.storage_path);
-  if (paths.length) {
-    const { error: storageError } = await supabase.storage
-      .from("pattern-documents")
-      .remove(paths);
-    if (storageError) {
-      throw new Error(
-        `Private files could not be deleted: ${storageError.message}`,
-      );
+    .map((document) => document.id);
+  if (activeDocumentIds.length) {
+    const { error: fileDeletionError } = await supabase
+      .from("document_versions")
+      .update({
+        raw_file: null,
+        raw_file_deleted_at: new Date().toISOString(),
+      })
+      .in("id", activeDocumentIds);
+    if (fileDeletionError) {
+      throw new Error("Private files could not be deleted");
     }
   }
 
-  const admin = createAdminSupabaseClient();
+  const admin = await createActionNeonClient();
   const { error: deletionError } = await admin
     .from("projects")
     .delete()
@@ -161,7 +160,7 @@ export async function deleteProject(formData: FormData) {
 
 export async function requestAccountDeletion() {
   const user = await requireUser();
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { error } = await supabase.from("deletion_requests").insert({
     owner_id: user.id,
     request_type: "account",

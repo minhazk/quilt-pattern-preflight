@@ -5,7 +5,7 @@ import {
   renderApprovedReport,
   type PatternModelPayload,
 } from "@/lib/preflight-client";
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createServerNeonClient } from "@/lib/neon/server";
 
 export const runtime = "nodejs";
 
@@ -23,7 +23,7 @@ export async function GET(
     );
   }
   const { projectId } = await context.params;
-  const supabase = await createServerSupabaseClient();
+  const supabase = await createServerNeonClient();
   const { data: project } = await supabase
     .from("projects")
     .select("id, status")

@@ -22,7 +22,6 @@
     "format:check": "prettier --check ."
   },
   "devDependencies": {
-    "prettier": "3.9.6",
-    "supabase": "2.110.0"
+    "prettier": "3.9.6"
   }
 }

@@ -16,7 +16,7 @@ apps/web/             Next.js customer, operator and Stripe application
 services/preflight/   FastAPI extraction, rules and approved-PDF renderer
 packages/contracts/   Shared Zod contracts and state-machine tests
 fixtures/             20 synthetic DOCX/PDF files and hand-declared goldens
-supabase/              SQL schema, RLS, private storage and local config
+neon/                  SQL schema, RLS and hard-capped private file storage
 docs/                  Product, operational, validation and deployment guides
 ```
 
@@ -25,7 +25,6 @@ docs/                  Product, operational, validation and deployment guides
 - Node.js 24 or newer
 - project-pinned `pnpm@11.16.0`
 - Python 3.12
-- Docker Desktop or Podman for local Supabase
 - Stripe CLI for local webhook forwarding
 
 Do not substitute npm for the project-pinned pnpm version.
@@ -37,35 +36,27 @@ cp .env.example .env.local
 pnpm install --frozen-lockfile
 python3.12 -m venv .venv
 .venv/bin/pip install -e 'services/preflight[dev]'
-pnpm exec supabase start
 ```
 
-Copy the local API URL, publishable key, and secret key printed by Supabase into
-`.env.local`. Start the services in separate terminals:
+Leave the Neon variables empty to use the read-only sample adapter, or copy a
+Neon branch's Auth, Data API and pooled database values into `.env.local`.
+Start the services in separate terminals:
 
 ```bash
 pnpm dev:service
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). With Supabase variables
+Open [http://localhost:3000](http://localhost:3000). With Neon variables
 empty and `DEV_AUTH_ENABLED=true`, the clearly labelled sample adapter is
 available. It never writes a pretend customer record.
 
 ## Database
 
-`pnpm exec supabase start` creates a clean local stack and applies
-`supabase/migrations/20260729121046_initial_schema.sql`. Lint the applied
-database with:
-
-```bash
-pnpm exec supabase db lint --local --level warning --fail-on error
-```
-
-Docker/Podman is required. Never reset or clear a shared or remote database.
-Operator access is granted through Supabase Auth `app_metadata.role` set to
-`operator` or `admin`; editable profile fields are never trusted for
-authorisation.
+Apply `neon/migrations/0001_initial.sql` to an isolated Neon branch first, then
+promote the verified forward migration. Never reset or clear a shared or remote
+database. Operator access is granted through the protected `profiles.role`
+record; editable browser claims are never trusted for authorisation.
 
 ## Stripe test setup
 
@@ -108,15 +99,16 @@ The public sample is at `apps/web/public/sample-preflight-report.pdf`.
 
 ## Deployment
 
-Deploy the web app from `apps/web` to Vercel, the database/storage/auth project
-to Supabase, and `services/preflight` to a container host using its Dockerfile.
+The web app is deployed as the `quiltpreflight` Cloudflare Worker at
+[preflight.emkayfoundry.com](https://preflight.emkayfoundry.com). Neon provides
+Auth, Postgres and the Data API. The deterministic Python service remains a
+separate deployment boundary.
 Set `DEV_AUTH_ENABLED=false` in every production environment. Exact sequencing,
 health checks, secrets and rollback boundaries are in
 [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Troubleshooting
 
-- Supabase CLI says Docker is missing: install/start Docker Desktop or Podman.
 - `ERR_PNPM_ABORTED_REMOVE_MODULES_DIR_NO_TTY`: run
   `pnpm install --force` from a login shell, then rerun `pnpm check`.
 - Next build cannot fetch Google fonts: allow outbound access to
@@ -124,14 +116,12 @@ health checks, secrets and rollback boundaries are in
 - Upload returns 422: confirm the file is DOCX or a PDF with selectable text,
   under 15 MB, and within the supported scope.
 - Checkout redirects but no credit appears: inspect the Stripe test event,
-  webhook signature secret, and Supabase `stripe_events`/`payments` records.
+  webhook signature secret, and Neon `stripe_events`/`payments` records.
 
 ## Product status
 
 This repository implements an **operator-assisted paid pilot**. External
-credentials, migration into the target Supabase project, Stripe test-mode
-end-to-end fulfilment, email delivery, and production deployment must be
-verified in the target accounts before accepting live payments. The migration,
-database lint and RLS isolation tests run against a clean Postgres 17 service in
-CI. See
+Stripe sandbox end-to-end fulfilment, the Python computation deployment and
+email delivery must still be verified before accepting payments. The Neon
+migration and RLS inventory are verified in the target project. See
 [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).

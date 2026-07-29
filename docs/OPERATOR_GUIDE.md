@@ -2,8 +2,9 @@
 
 ## Access
 
-Use a dedicated Supabase Auth account with `app_metadata.role=operator`. Never
-share accounts. Opening `/admin` lists unreleased work and validation metrics.
+Use a dedicated Neon Auth account whose protected profile role is `operator`.
+Never share accounts. Opening `/admin` lists unreleased work and validation
+metrics.
 
 ## Review procedure
 
@@ -26,6 +27,6 @@ actor, before value, after value and timestamp.
 Credits are webhook-created. Never grant value based on a customer screenshot.
 Handle Stripe refunds in Stripe first, then reconcile the ledger; do not delete
 financial records. Process queued account deletion only after refund/chargeback
-obligations are resolved, then remove private Storage objects and Auth identity.
+obligations are resolved, then remove private raw files and the Auth identity.
 
 Never put manuscript content into email, analytics, logs or support tools.
