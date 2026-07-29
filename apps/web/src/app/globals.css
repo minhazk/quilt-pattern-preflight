@@ -249,6 +249,7 @@ h1 em, .final-cta h2 em { color: var(--rust); font-weight: 400; }
 .auth-form h2 { margin: 0; font-size: 43px; }
 .auth-form > p { color: var(--ink-soft); font-size: 13px; }
 .auth-form form { display: grid; gap: 12px; margin-top: 30px; }
+.form-error { padding: 12px; color: #6d2119 !important; background: #f7ded9; border-left: 3px solid var(--rust); }
 label, legend { color: var(--ink); font-size: 11px; font-weight: 800; letter-spacing: .03em; }
 input, select, textarea { width: 100%; min-height: 48px; padding: 10px 12px; color: var(--ink); background: white; border: 1px solid rgba(24,37,30,.28); border-radius: 0; }
 input:focus, select:focus, textarea:focus { outline: 3px solid rgba(216,154,67,.35); border-color: var(--forest); }
@@ -320,6 +321,9 @@ fieldset input[type="checkbox"] { width: 18px; min-height: 18px; }
 .settings-card { margin-bottom: 20px; }
 .settings-card p { max-width: 700px; color: var(--ink-soft); }
 .danger-card { border-left: 4px solid var(--rust); }
+.pricing-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 24px; }
+.pricing-grid .settings-card { margin: 0; }
+.pricing-grid form { margin-top: 24px; }
 
 /* Policies */
 .policy-page { min-height: 100vh; background: var(--cream); }
@@ -369,6 +373,6 @@ fieldset input[type="checkbox"] { width: 18px; min-height: 18px; }
   .project-list article { grid-template-columns: 1fr; }
   .stepper li { overflow: hidden; max-width: 42px; }
   .wizard-card, .settings-card { padding: 28px 20px; }
-  .form-grid, .submit-summary { grid-template-columns: 1fr; }
+  .form-grid, .submit-summary, .pricing-grid { grid-template-columns: 1fr; }
   .submit-summary div + div { border-left: 0; border-top: 1px solid var(--line); }
 }

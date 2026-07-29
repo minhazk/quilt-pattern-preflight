@@ -1,17 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
+import { sendMagicLink } from "@/app/auth/actions";
+import { isLocalSampleMode } from "@/lib/env";
 
 export const metadata: Metadata = { title: "Sign in" };
 
 export default async function SignInPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string; plan?: string }>;
+  searchParams: Promise<{ next?: string; plan?: string; error?: string }>;
 }) {
   const query = await searchParams;
   const next =
     query.next?.startsWith("/dashboard") ? query.next : "/dashboard";
+  const errorMessage =
+    query.error === "invalid"
+      ? "Enter a valid email address."
+      : query.error === "delivery"
+        ? "The sign-in email could not be sent. Please try again."
+        : query.error === "callback"
+          ? "That sign-in link is invalid or expired. Request a fresh link."
+          : null;
 
   return (
     <main className="auth-page">
@@ -37,12 +47,18 @@ export default async function SignInPage({
             Use a magic link—no password to remember. In local development, the
             sample-account button opens the complete workflow.
           </p>
-          <form>
+          {errorMessage && (
+            <p className="form-error" role="alert">
+              {errorMessage}
+            </p>
+          )}
+          <form action={sendMagicLink}>
             <label htmlFor="email">Email address</label>
             <input id="email" name="email" type="email" autoComplete="email" placeholder="you@studio.com" required />
+            <input name="next" type="hidden" value={next} />
             <button className="button button-primary" type="submit">Email me a secure link</button>
           </form>
-          {process.env.DEV_AUTH_ENABLED !== "false" && (
+          {isLocalSampleMode() && (
             <Link className="dev-account-link" href={next as "/dashboard"}>
               Continue with local sample account
             </Link>
