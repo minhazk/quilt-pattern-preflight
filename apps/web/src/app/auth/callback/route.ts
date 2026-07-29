@@ -4,8 +4,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const code = request.nextUrl.searchParams.get("code");
   const requestedNext = request.nextUrl.searchParams.get("next");
-  const next =
-    requestedNext?.startsWith("/dashboard") ? requestedNext : "/dashboard";
+  const next = requestedNext?.startsWith("/dashboard")
+    ? requestedNext
+    : "/dashboard";
 
   if (!code) {
     return NextResponse.redirect(

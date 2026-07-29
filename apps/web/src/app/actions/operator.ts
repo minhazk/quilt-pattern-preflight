@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireOperator } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { sendReportReadyEmail } from "@/lib/email";
 
 const findingDecisionSchema = z.object({
   findingId: z.string().uuid(),
@@ -79,7 +80,8 @@ export async function addManualFinding(formData: FormData) {
     page: values.sourcePage ?? null,
     excerpt: values.sourceExcerpt,
   });
-  if (sourceError) throw new Error(`Finding source failed: ${sourceError.code}`);
+  if (sourceError)
+    throw new Error(`Finding source failed: ${sourceError.code}`);
   revalidatePath(`/admin/projects/${values.projectId}`);
 }
 
@@ -111,20 +113,22 @@ export async function updateOperatorReview(formData: FormData) {
   }
 
   if (values.action === "clarify") {
-    const [{ error: reviewError }, { error: projectError }] = await Promise.all([
-      supabase
-        .from("operator_reviews")
-        .update({
-          reviewer_id: operator.id,
-          status: "clarification_requested",
-          notes: values.note,
-        })
-        .eq("id", values.reviewId),
-      supabase
-        .from("projects")
-        .update({ status: "clarification_requested" })
-        .eq("id", values.projectId),
-    ]);
+    const [{ error: reviewError }, { error: projectError }] = await Promise.all(
+      [
+        supabase
+          .from("operator_reviews")
+          .update({
+            reviewer_id: operator.id,
+            status: "clarification_requested",
+            notes: values.note,
+          })
+          .eq("id", values.reviewId),
+        supabase
+          .from("projects")
+          .update({ status: "clarification_requested" })
+          .eq("id", values.projectId),
+      ],
+    );
     if (reviewError || projectError) {
       throw new Error("Clarification request could not be recorded");
     }
@@ -180,28 +184,29 @@ export async function updateOperatorReview(formData: FormData) {
         )
       : null;
 
-    const [{ error: reviewError }, { error: documentError }] = await Promise.all([
-      supabase
-        .from("operator_reviews")
-        .update({
-          reviewer_id: operator.id,
-          status: "released",
-          completed_at: now.toISOString(),
-          approved_findings_count: approvedCount,
-          suppressed_findings_count: suppressedCount,
-          manual_findings_count: manualCount,
-          processing_seconds: processingSeconds,
-          notes: values.note || null,
-        })
-        .eq("id", values.reviewId),
-      supabase
-        .from("document_versions")
-        .update({
-          review_status: "released",
-          approved_at: now.toISOString(),
-        })
-        .eq("id", values.documentId),
-    ]);
+    const [{ error: reviewError }, { error: documentError }] =
+      await Promise.all([
+        supabase
+          .from("operator_reviews")
+          .update({
+            reviewer_id: operator.id,
+            status: "released",
+            completed_at: now.toISOString(),
+            approved_findings_count: approvedCount,
+            suppressed_findings_count: suppressedCount,
+            manual_findings_count: manualCount,
+            processing_seconds: processingSeconds,
+            notes: values.note || null,
+          })
+          .eq("id", values.reviewId),
+        supabase
+          .from("document_versions")
+          .update({
+            review_status: "released",
+            approved_at: now.toISOString(),
+          })
+          .eq("id", values.documentId),
+      ]);
     if (reviewError || documentError) {
       throw new Error("Review release metadata could not be recorded");
     }
@@ -239,6 +244,18 @@ export async function updateOperatorReview(formData: FormData) {
         manual_findings: manualCount,
       },
     });
+    const { data: releasedProject } = await supabase
+      .from("projects")
+      .select("owner_id, title")
+      .eq("id", values.projectId)
+      .single();
+    if (releasedProject) {
+      await sendReportReadyEmail({
+        ownerId: releasedProject.owner_id,
+        projectId: values.projectId,
+        projectTitle: releasedProject.title,
+      });
+    }
   }
 
   revalidatePath("/admin");

@@ -8,6 +8,12 @@ create schema if not exists private;
 revoke all on schema private from public, anon, authenticated;
 grant usage on schema private to service_role;
 
+create table private.rate_limit_windows (
+  bucket_hash text primary key,
+  window_started_at timestamptz not null,
+  request_count integer not null check (request_count > 0)
+);
+
 create type public.app_role as enum ('customer', 'operator', 'admin');
 create type public.project_status as enum (
   'draft',
@@ -89,6 +95,28 @@ create table public.profiles (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+create or replace function private.create_customer_profile()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  insert into public.profiles (id, email, display_name)
+  values (
+    new.id,
+    coalesce(new.email, ''),
+    nullif(new.raw_user_meta_data ->> 'display_name', '')
+  )
+  on conflict (id) do update set email = excluded.email;
+  return new;
+end
+$$;
+
+create trigger auth_user_created_profile
+after insert or update of email on auth.users
+for each row execute function private.create_customer_profile();
 
 create table public.acquisition_sources (
   id uuid primary key default gen_random_uuid(),
@@ -736,6 +764,55 @@ end
 $$;
 revoke all on function public.consume_project_credit(uuid) from public, anon;
 grant execute on function public.consume_project_credit(uuid) to authenticated;
+
+create or replace function public.check_rate_limit(
+  p_key text,
+  p_limit integer,
+  p_window_seconds integer
+)
+returns boolean
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  hashed_key text;
+  current_window private.rate_limit_windows%rowtype;
+begin
+  if char_length(p_key) < 3 or p_limit not between 1 and 1000 or
+     p_window_seconds not between 1 and 86400 then
+    raise exception 'invalid_rate_limit_parameters' using errcode = 'invalid_parameter_value';
+  end if;
+  hashed_key := encode(extensions.digest(p_key, 'sha256'), 'hex');
+  perform pg_advisory_xact_lock(hashtextextended(hashed_key, 0));
+  select * into current_window
+  from private.rate_limit_windows
+  where bucket_hash = hashed_key;
+
+  if not found or
+     current_window.window_started_at <=
+       now() - make_interval(secs => p_window_seconds) then
+    insert into private.rate_limit_windows (
+      bucket_hash, window_started_at, request_count
+    ) values (hashed_key, now(), 1)
+    on conflict (bucket_hash) do update set
+      window_started_at = excluded.window_started_at,
+      request_count = 1;
+    return true;
+  end if;
+
+  if current_window.request_count >= p_limit then
+    return false;
+  end if;
+  update private.rate_limit_windows
+  set request_count = request_count + 1
+  where bucket_hash = hashed_key;
+  return true;
+end
+$$;
+revoke all on function public.check_rate_limit(text, integer, integer) from public;
+grant execute on function public.check_rate_limit(text, integer, integer)
+  to anon, authenticated, service_role;
 
 create or replace view public.credit_balances
 with (security_invoker = true)

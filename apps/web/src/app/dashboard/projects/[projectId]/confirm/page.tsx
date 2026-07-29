@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { confirmAndSubmitPreflight } from "@/app/actions/projects";
 import { requireUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { ModelFields } from "@/app/dashboard/projects/[projectId]/confirm/model-fields";
 
 function splitDimension(value: string | undefined): [string, string] {
   const parts = value?.split(/\s+x\s+/i);
@@ -61,7 +62,8 @@ export default async function ConfirmExtractionPage({
           <h1>Confirm the extracted model</h1>
           <p>
             {document.original_filename} · {document.page_count} page
-            {document.page_count === 1 ? "" : "s"} · {document.file_type.toUpperCase()}
+            {document.page_count === 1 ? "" : "s"} ·{" "}
+            {document.file_type.toUpperCase()}
           </p>
         </div>
       </div>
@@ -102,70 +104,24 @@ export default async function ConfirmExtractionPage({
             </div>
           ))}
         </div>
-        <p className="eyebrow form-section-label">Canonical simple-grid model</p>
+        <p className="eyebrow form-section-label">
+          Canonical simple-grid model
+        </p>
         <h2>Declare the relationship to check</h2>
         <p className="form-note">
           Extraction proposes evidence; you declare the mathematical
           relationship. The engine never guesses unsupported construction.
         </p>
-        <div className="form-grid">
-          <label>
-            Piece name
-            <input name="pieceName" defaultValue="Primary piece" required />
-          </label>
-          <label>
-            Cut width
-            <input name="cutWidth" defaultValue={cutWidth || "2 1/2"} required />
-          </label>
-          <label>
-            Cut height
-            <input name="cutHeight" defaultValue={cutHeight || "4 1/2"} required />
-          </label>
-          <label>
-            Quantity per block
-            <input name="quantityPerBlock" type="number" min="0" defaultValue="1" required />
-          </label>
-          <label>
-            Stated total quantity
-            <input
-              name="statedTotalQuantity"
-              type="number"
-              min="0"
-              defaultValue={quantities[0]?.normalized_value || "1"}
-              required
-            />
-          </label>
-          <label>
-            Block name
-            <input name="blockName" defaultValue="Primary block" required />
-          </label>
-          <label>
-            Finished block width
-            <input name="finishedWidth" defaultValue={finishedWidth || "12"} required />
-          </label>
-          <label>
-            Finished block height
-            <input name="finishedHeight" defaultValue={finishedHeight || "12"} required />
-          </label>
-          <label>
-            Block quantity
-            <input
-              name="blockQuantity"
-              type="number"
-              min="1"
-              defaultValue={quantities.at(-1)?.normalized_value || "1"}
-              required
-            />
-          </label>
-          <label>
-            Stated quilt width
-            <input name="statedQuiltWidth" defaultValue={quiltWidth} />
-          </label>
-          <label>
-            Stated quilt height
-            <input name="statedQuiltHeight" defaultValue={quiltHeight} />
-          </label>
-        </div>
+        <ModelFields
+          initialCutWidth={cutWidth || "2 1/2"}
+          initialCutHeight={cutHeight || "4 1/2"}
+          initialTotal={quantities[0]?.normalized_value || "1"}
+          initialFinishedWidth={finishedWidth || "12"}
+          initialFinishedHeight={finishedHeight || "12"}
+          initialBlockQuantity={quantities.at(-1)?.normalized_value || "1"}
+          initialQuiltWidth={quiltWidth}
+          initialQuiltHeight={quiltHeight}
+        />
         <div className="wizard-actions">
           <p className="form-note">
             Submitting consumes one credit atomically and places the automated

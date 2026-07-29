@@ -31,9 +31,14 @@ export async function GET(
     .single();
   if (
     !project ||
-    !["report_ready", "revision_available", "completed"].includes(project.status)
+    !["report_ready", "revision_available", "completed"].includes(
+      project.status,
+    )
   ) {
-    return NextResponse.json({ error: "Report is not released" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Report is not released" },
+      { status: 404 },
+    );
   }
   const { data: document } = await supabase
     .from("document_versions")

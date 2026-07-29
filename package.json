@@ -16,6 +16,7 @@
     "test:service": ".venv/bin/python -m pytest services/preflight/tests --cov=preflight_service --cov-report=term-missing",
     "test": "pnpm test:js && pnpm test:service",
     "fixtures": ".venv/bin/python fixtures/generate_corpus.py",
+    "sample:report": ".venv/bin/python services/preflight/scripts/generate_sample_report.py",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

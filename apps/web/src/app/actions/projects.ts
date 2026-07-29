@@ -67,6 +67,18 @@ export async function createProjectUpload(formData: FormData) {
 
   const values = uploadSchema.parse(Object.fromEntries(formData));
   const file = validateFile(formData.get("patternFile"));
+  const rateLimitClient = createAdminSupabaseClient();
+  const { data: uploadAllowed } = await rateLimitClient.rpc(
+    "check_rate_limit",
+    {
+      p_key: `upload:${user.id}`,
+      p_limit: 10,
+      p_window_seconds: 3600,
+    },
+  );
+  if (!uploadAllowed) {
+    throw new Error("Upload limit reached. Try again later.");
+  }
   const extraction = await extractPatternDocument(file);
   const bytes = Buffer.from(await file.arrayBuffer());
   const sha256 = createHash("sha256").update(bytes).digest("hex");
@@ -151,7 +163,9 @@ export async function createProjectUpload(formData: FormData) {
       confirmation_status: "proposed",
     }));
     if (entityRows.length) {
-      const { error } = await admin.from("extracted_entities").insert(entityRows);
+      const { error } = await admin
+        .from("extracted_entities")
+        .insert(entityRows);
       if (error) throw error;
     }
 
@@ -221,7 +235,10 @@ export async function createProjectUpload(formData: FormData) {
       await admin.storage.from("pattern-documents").remove([storagePath]);
     }
     if (projectId) {
-      await admin.from("projects").update({ status: "failed" }).eq("id", projectId);
+      await admin
+        .from("projects")
+        .update({ status: "failed" })
+        .eq("id", projectId);
     }
     throw new Error(
       error instanceof Error && error.message
@@ -239,6 +256,14 @@ export async function uploadRevision(formData: FormData) {
   const projectId = z.string().uuid().parse(formData.get("projectId"));
   const file = validateFile(formData.get("patternFile"));
   const admin = createAdminSupabaseClient();
+  const { data: uploadAllowed } = await admin.rpc("check_rate_limit", {
+    p_key: `upload:${user.id}`,
+    p_limit: 10,
+    p_window_seconds: 3600,
+  });
+  if (!uploadAllowed) {
+    throw new Error("Upload limit reached. Try again later.");
+  }
   const { data: project, error: projectError } = await admin
     .from("projects")
     .select("id, owner_id, status, revision_deadline, revision_used_at")
@@ -381,9 +406,14 @@ export async function uploadRevision(formData: FormData) {
     if (uploaded) {
       await admin.storage.from("pattern-documents").remove([storagePath]);
     }
-    await admin.from("projects").update({ status: "failed" }).eq("id", project.id);
+    await admin
+      .from("projects")
+      .update({ status: "failed" })
+      .eq("id", project.id);
     throw new Error(
-      error instanceof Error ? `Revision upload failed: ${error.message}` : "Revision upload failed",
+      error instanceof Error
+        ? `Revision upload failed: ${error.message}`
+        : "Revision upload failed",
     );
   }
 
@@ -394,11 +424,6 @@ const confirmationSchema = z.object({
   projectId: z.string().uuid(),
   documentId: z.string().uuid(),
   title: z.string().min(1).max(200),
-  pieceName: z.string().trim().min(1).max(200),
-  cutWidth: z.string().trim().min(1).max(40),
-  cutHeight: z.string().trim().min(1).max(40),
-  quantityPerBlock: z.coerce.number().int().nonnegative(),
-  statedTotalQuantity: z.coerce.number().int().nonnegative(),
   blockName: z.string().trim().min(1).max(200),
   finishedWidth: z.string().trim().min(1).max(40),
   finishedHeight: z.string().trim().min(1).max(40),
@@ -407,10 +432,88 @@ const confirmationSchema = z.object({
   statedQuiltHeight: z.string().trim().max(40).optional(),
 });
 
+const optionalNonnegativeInteger = z.preprocess(
+  (value) => (value === "" ? undefined : value),
+  z.coerce.number().int().nonnegative().optional(),
+);
+const optionalMeasurement = z
+  .string()
+  .trim()
+  .max(40)
+  .transform((value) => value || null);
+const pieceSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  fabricName: z
+    .string()
+    .trim()
+    .max(200)
+    .transform((value) => value || null),
+  cutWidth: z.string().trim().min(1).max(40),
+  cutHeight: z.string().trim().min(1).max(40),
+  finishedWidth: optionalMeasurement,
+  finishedHeight: optionalMeasurement,
+  quantityPerBlock: z.coerce.number().int().nonnegative(),
+  statedTotalQuantity: z.coerce.number().int().nonnegative(),
+  subcutLength: optionalMeasurement,
+  statedStripCount: optionalNonnegativeInteger,
+});
+const fabricSchema = z.object({
+  name: z.string().trim().min(1).max(200),
+  statedRequirement: z.string().trim().min(1).max(40),
+  requiredStripCount: optionalNonnegativeInteger,
+  stripCutWidth: optionalMeasurement,
+  allowance: z.string().trim().min(1).max(40),
+});
+
+function stringEntries(formData: FormData, name: string): string[] {
+  return formData.getAll(name).map(String);
+}
+
 export async function confirmAndSubmitPreflight(formData: FormData) {
   const user = await requireUser();
   if (user.sample) redirect("/demo");
   const values = confirmationSchema.parse(Object.fromEntries(formData));
+  const pieceNames = stringEntries(formData, "pieceName");
+  const pieces = z
+    .array(pieceSchema)
+    .min(1)
+    .max(100)
+    .parse(
+      pieceNames.map((name, index) => ({
+        name,
+        fabricName: stringEntries(formData, "pieceFabricName")[index] ?? "",
+        cutWidth: stringEntries(formData, "pieceCutWidth")[index],
+        cutHeight: stringEntries(formData, "pieceCutHeight")[index],
+        finishedWidth:
+          stringEntries(formData, "pieceFinishedWidth")[index] ?? "",
+        finishedHeight:
+          stringEntries(formData, "pieceFinishedHeight")[index] ?? "",
+        quantityPerBlock: stringEntries(formData, "pieceQuantityPerBlock")[
+          index
+        ],
+        statedTotalQuantity: stringEntries(formData, "pieceStatedTotal")[index],
+        subcutLength: stringEntries(formData, "pieceSubcutLength")[index] ?? "",
+        statedStripCount:
+          stringEntries(formData, "pieceStatedStripCount")[index] ?? "",
+      })),
+    );
+  const fabricNames = stringEntries(formData, "fabricName");
+  const fabrics = z
+    .array(fabricSchema)
+    .max(100)
+    .parse(
+      fabricNames.map((name, index) => ({
+        name,
+        statedRequirement: stringEntries(formData, "fabricStatedRequirement")[
+          index
+        ],
+        requiredStripCount:
+          stringEntries(formData, "fabricRequiredStripCount")[index] ?? "",
+        stripCutWidth:
+          stringEntries(formData, "fabricStripCutWidth")[index] ?? "",
+        allowance: stringEntries(formData, "fabricAllowance")[index] || "0",
+      })),
+    );
   const admin = createAdminSupabaseClient();
 
   const { data: project, error: projectError } = await admin
@@ -464,7 +567,8 @@ export async function confirmAndSubmitPreflight(formData: FormData) {
     if (error) throw new Error("An extracted value could not be confirmed");
   }
 
-  const assumptions = assumptionsRow.values as PatternModelPayload["assumptions"];
+  const assumptions =
+    assumptionsRow.values as PatternModelPayload["assumptions"];
   const sources = entities.slice(0, 3).map((entity) => ({
     page: entity.source_page,
     section: entity.source_section,
@@ -477,19 +581,30 @@ export async function confirmAndSubmitPreflight(formData: FormData) {
     document_version: document.version_number,
     title: values.title,
     assumptions,
-    fabrics: [],
-    pieces: [
-      {
-        name: values.pieceName,
-        cut_width: values.cutWidth,
-        cut_height: values.cutHeight,
-        quantity_per_block: values.quantityPerBlock,
-        stated_total_quantity: values.statedTotalQuantity,
-        extra_quantity: 0,
-        sources,
-        confirmed: true,
-      },
-    ],
+    fabrics: fabrics.map((fabric) => ({
+      name: fabric.name,
+      stated_requirement: fabric.statedRequirement,
+      required_strip_count: fabric.requiredStripCount ?? null,
+      strip_cut_width: fabric.stripCutWidth,
+      allowance: fabric.allowance,
+      sources,
+      confirmed: true,
+    })),
+    pieces: pieces.map((piece) => ({
+      name: piece.name,
+      fabric_name: piece.fabricName,
+      cut_width: piece.cutWidth,
+      cut_height: piece.cutHeight,
+      finished_width: piece.finishedWidth,
+      finished_height: piece.finishedHeight,
+      quantity_per_block: piece.quantityPerBlock,
+      stated_total_quantity: piece.statedTotalQuantity,
+      extra_quantity: 0,
+      subcut_length: piece.subcutLength,
+      stated_strip_count: piece.statedStripCount ?? null,
+      sources,
+      confirmed: true,
+    })),
     blocks: [
       {
         name: values.blockName,
@@ -504,7 +619,7 @@ export async function confirmAndSubmitPreflight(formData: FormData) {
         confirmed: true,
       },
     ],
-    used_piece_names: [values.pieceName],
+    used_piece_names: pieces.map((piece) => piece.name),
   };
 
   const result = await runPatternPreflight(model);
@@ -532,17 +647,42 @@ export async function confirmAndSubmitPreflight(formData: FormData) {
   }
 
   try {
+    const { data: insertedFabrics, error: fabricError } = fabrics.length
+      ? await admin
+          .from("fabrics")
+          .insert(
+            fabrics.map((fabric) => ({
+              document_version_id: document.id,
+              name: fabric.name,
+              stated_requirement: fabric.statedRequirement,
+              stated_requirement_source: sources[0] ?? null,
+              confirmed: true,
+            })),
+          )
+          .select("id, name")
+      : { data: [], error: null };
+    if (fabricError) throw fabricError;
+    const fabricIds = new Map(
+      (insertedFabrics ?? []).map((fabric) => [fabric.name, fabric.id]),
+    );
     const [{ error: pieceError }, { error: blockError }] = await Promise.all([
-      admin.from("pieces").insert({
-        document_version_id: document.id,
-        name: values.pieceName,
-        cut_width: values.cutWidth,
-        cut_height: values.cutHeight,
-        quantity_per_block: values.quantityPerBlock,
-        stated_total_quantity: values.statedTotalQuantity,
-        source_references: sources,
-        confirmed: true,
-      }),
+      admin.from("pieces").insert(
+        pieces.map((piece) => ({
+          document_version_id: document.id,
+          fabric_id: piece.fabricName
+            ? (fabricIds.get(piece.fabricName) ?? null)
+            : null,
+          name: piece.name,
+          cut_width: piece.cutWidth,
+          cut_height: piece.cutHeight,
+          finished_width: piece.finishedWidth,
+          finished_height: piece.finishedHeight,
+          quantity_per_block: piece.quantityPerBlock,
+          stated_total_quantity: piece.statedTotalQuantity,
+          source_references: sources,
+          confirmed: true,
+        })),
+      ),
       admin.from("blocks").insert({
         document_version_id: document.id,
         name: values.blockName,
@@ -665,7 +805,10 @@ export async function confirmAndSubmitPreflight(formData: FormData) {
     const writeError = writes.find((write) => write.error)?.error;
     if (writeError) throw writeError;
   } catch (error) {
-    await admin.from("projects").update({ status: "failed" }).eq("id", project.id);
+    await admin
+      .from("projects")
+      .update({ status: "failed" })
+      .eq("id", project.id);
     throw new Error(
       error instanceof Error ? error.message : "Preflight persistence failed",
     );

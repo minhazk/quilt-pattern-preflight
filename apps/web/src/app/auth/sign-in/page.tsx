@@ -12,8 +12,7 @@ export default async function SignInPage({
   searchParams: Promise<{ next?: string; plan?: string; error?: string }>;
 }) {
   const query = await searchParams;
-  const next =
-    query.next?.startsWith("/dashboard") ? query.next : "/dashboard";
+  const next = query.next?.startsWith("/dashboard") ? query.next : "/dashboard";
   const errorMessage =
     query.error === "invalid"
       ? "Enter a valid email address."
@@ -54,9 +53,18 @@ export default async function SignInPage({
           )}
           <form action={sendMagicLink}>
             <label htmlFor="email">Email address</label>
-            <input id="email" name="email" type="email" autoComplete="email" placeholder="you@studio.com" required />
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@studio.com"
+              required
+            />
             <input name="next" type="hidden" value={next} />
-            <button className="button button-primary" type="submit">Email me a secure link</button>
+            <button className="button button-primary" type="submit">
+              Email me a secure link
+            </button>
           </form>
           {isLocalSampleMode() && (
             <Link className="dev-account-link" href={next as "/dashboard"}>

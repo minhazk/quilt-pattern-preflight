@@ -44,7 +44,13 @@ export default async function FeedbackPage({
           </label>
           <label>
             Minutes saved
-            <input name="minutesSaved" type="number" min="0" max="1440" required />
+            <input
+              name="minutesSaved"
+              type="number"
+              min="0"
+              max="1440"
+              required
+            />
           </label>
           <label>
             Would you pay £20 for another pattern?
@@ -79,9 +85,9 @@ export default async function FeedbackPage({
         <fieldset>
           <legend>Explicit benchmark consent</legend>
           <label>
-            <input name="benchmarkConsent" type="checkbox" required />
-            I allow an anonymised result—not my document text or identity—to
-            improve the synthetic benchmark.
+            <input name="benchmarkConsent" type="checkbox" required />I allow an
+            anonymised result—not my document text or identity—to improve the
+            synthetic benchmark.
           </label>
         </fieldset>
         <div className="wizard-actions">

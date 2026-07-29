@@ -36,9 +36,12 @@ describe("verifyCompletedCheckout", () => {
     { amount_total: 4900 } as Partial<Stripe.Checkout.Session>,
     { payment_status: "unpaid" } as Partial<Stripe.Checkout.Session>,
     { payment_intent: null } as Partial<Stripe.Checkout.Session>,
-  ])("rejects a mismatched checkout: %o", (override: Partial<Stripe.Checkout.Session>) => {
-    expect(() => verifyCompletedCheckout(session(override))).toThrow();
-  });
+  ])(
+    "rejects a mismatched checkout: %o",
+    (override: Partial<Stripe.Checkout.Session>) => {
+      expect(() => verifyCompletedCheckout(session(override))).toThrow();
+    },
+  );
 
   it("rejects metadata that tries to grant a different product", () => {
     expect(() =>

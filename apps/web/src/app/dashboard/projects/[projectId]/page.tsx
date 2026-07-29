@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import {
   deleteRawDocument,
+  deleteProject,
   respondToFinding,
 } from "@/app/actions/customer";
 import { FindingCard } from "@/components/finding-card";
@@ -28,7 +29,9 @@ export default async function ProjectReportPage({
   if (!project) notFound();
   const { data: document } = await supabase
     .from("document_versions")
-    .select("id, version_number, review_status, approved_at, comparison_result, raw_file_deleted_at")
+    .select(
+      "id, version_number, review_status, approved_at, comparison_result, raw_file_deleted_at",
+    )
     .eq("project_id", project.id)
     .order("version_number", { ascending: false })
     .limit(1)
@@ -54,7 +57,9 @@ export default async function ProjectReportPage({
           <h1>{project.title}</h1>
           <p>
             Version {document.version_number} ·{" "}
-            {released ? "Operator reviewed" : "Beta quality control in progress"}
+            {released
+              ? "Operator reviewed"
+              : "Beta quality control in progress"}
           </p>
         </div>
         <div className="report-actions">
@@ -103,11 +108,15 @@ export default async function ProjectReportPage({
           <h2>Issue resolution across confirmed models</h2>
           <div className="severity-counts">
             <div>
-              <strong>{document.comparison_result.resolved?.length ?? 0}</strong>
+              <strong>
+                {document.comparison_result.resolved?.length ?? 0}
+              </strong>
               <span>Resolved</span>
             </div>
             <div>
-              <strong>{document.comparison_result.remaining?.length ?? 0}</strong>
+              <strong>
+                {document.comparison_result.remaining?.length ?? 0}
+              </strong>
               <span>Remaining</span>
             </div>
             <div>
@@ -138,6 +147,24 @@ export default async function ProjectReportPage({
           )}
         </section>
       )}
+      <section className="settings-card danger-card">
+        <h2>Delete this project</h2>
+        <p>
+          This permanently deletes raw files, confirmed values, findings,
+          feedback and report history. Payment records remain for financial
+          compliance but are detached from the project.
+        </p>
+        <form action={deleteProject} className="project-delete-form">
+          <input name="projectId" type="hidden" value={project.id} />
+          <label>
+            Enter <strong>{project.title}</strong> to confirm
+            <input name="confirmation" required autoComplete="off" />
+          </label>
+          <button className="button" type="submit">
+            Permanently delete project
+          </button>
+        </form>
+      </section>
       {!released ? (
         <section className="beta-callout">
           <span aria-hidden="true">◇</span>

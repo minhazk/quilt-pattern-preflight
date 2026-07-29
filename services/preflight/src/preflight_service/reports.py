@@ -38,6 +38,7 @@ def generate_report_pdf(model: PatternModel, result: PreflightResult) -> bytes:
         bottomMargin=18 * mm,
         title=f"{model.title} preflight report",
         author="Quilt Pattern Preflight",
+        pageCompression=1,
     )
     styles = getSampleStyleSheet()
     styles.add(

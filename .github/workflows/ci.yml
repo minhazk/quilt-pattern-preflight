@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.16.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pnpm install --frozen-lockfile
+      - run: python -m venv .venv
+      - run: .venv/bin/pip install -e 'services/preflight[dev]'
+      - run: pnpm check
+      - name: Apply clean Supabase migration
+        run: >-
+          pnpm exec supabase start
+          --exclude realtime,imgproxy,studio,edge-runtime,logflare,vector,supavisor
+          --yes
+      - name: Lint applied database
+        run: pnpm exec supabase db lint --local --level warning --fail-on error
+      - name: Verify row-level isolation
+        run: pnpm exec supabase test db

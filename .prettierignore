@@ -1,0 +1,5 @@
+apps/web/public/
+fixtures/golden/
+fixtures/manifest.json
+pnpm-lock.yaml
+supabase/

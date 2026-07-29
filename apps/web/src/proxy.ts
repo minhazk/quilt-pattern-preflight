@@ -1,6 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
-import { hasSupabaseEnvironment, getPublicSupabaseEnvironment } from "@/lib/env";
+import {
+  hasSupabaseEnvironment,
+  getPublicSupabaseEnvironment,
+} from "@/lib/env";
 
 export async function proxy(request: NextRequest) {
   if (!hasSupabaseEnvironment()) {

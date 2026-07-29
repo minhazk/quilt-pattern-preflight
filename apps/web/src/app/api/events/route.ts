@@ -55,6 +55,21 @@ export async function POST(request: Request) {
     { auth: { persistSession: false } },
   );
   const user = await getCurrentUser();
+  const limitKey =
+    user && !user.sample
+      ? `analytics:user:${user.id}`
+      : `analytics:anonymous:${parsed.data.anonymousId ?? "missing"}`;
+  const { data: allowed } = await supabase.rpc("check_rate_limit", {
+    p_key: limitKey,
+    p_limit: 60,
+    p_window_seconds: 3600,
+  });
+  if (!allowed) {
+    return NextResponse.json(
+      { error: "Event rate limit exceeded" },
+      { status: 429 },
+    );
+  }
   const { error } = await supabase.from("analytics_events").insert({
     owner_id: user?.sample ? null : (user?.id ?? null),
     anonymous_id: parsed.data.anonymousId ?? null,

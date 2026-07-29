@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { createAdminSupabaseClient } from "@/lib/supabase/admin";
 
 const findingResponseSchema = z.object({
   projectId: z.string().uuid(),
@@ -108,4 +109,64 @@ export async function deleteRawDocument(formData: FormData) {
     completed_at: new Date().toISOString(),
   });
   revalidatePath(`/dashboard/projects/${projectId}`);
+}
+
+export async function deleteProject(formData: FormData) {
+  const user = await requireUser();
+  const projectId = z.string().uuid().parse(formData.get("projectId"));
+  const confirmation = z.string().trim().parse(formData.get("confirmation"));
+  const supabase = await createServerSupabaseClient();
+  const { data: project, error: projectError } = await supabase
+    .from("projects")
+    .select("id, title")
+    .eq("id", projectId)
+    .single();
+  if (projectError || !project || confirmation !== project.title) {
+    throw new Error("Enter the exact project title to confirm deletion");
+  }
+  const { data: documents, error: documentsError } = await supabase
+    .from("document_versions")
+    .select("storage_path, raw_file_deleted_at")
+    .eq("project_id", project.id);
+  if (documentsError) throw new Error("Project documents could not be listed");
+  const paths = (documents ?? [])
+    .filter((document) => !document.raw_file_deleted_at)
+    .map((document) => document.storage_path);
+  if (paths.length) {
+    const { error: storageError } = await supabase.storage
+      .from("pattern-documents")
+      .remove(paths);
+    if (storageError) {
+      throw new Error(
+        `Private files could not be deleted: ${storageError.message}`,
+      );
+    }
+  }
+
+  const admin = createAdminSupabaseClient();
+  const { error: deletionError } = await admin
+    .from("projects")
+    .delete()
+    .eq("id", project.id)
+    .eq("owner_id", user.id);
+  if (deletionError) throw new Error("Project records could not be deleted");
+  await admin.from("deletion_requests").insert({
+    owner_id: user.id,
+    request_type: "project",
+    status: "succeeded",
+    completed_at: new Date().toISOString(),
+  });
+  redirect("/dashboard");
+}
+
+export async function requestAccountDeletion() {
+  const user = await requireUser();
+  const supabase = await createServerSupabaseClient();
+  const { error } = await supabase.from("deletion_requests").insert({
+    owner_id: user.id,
+    request_type: "account",
+    status: "queued",
+  });
+  if (error) throw new Error("Account deletion request could not be queued");
+  redirect("/dashboard/settings?deletion=requested");
 }

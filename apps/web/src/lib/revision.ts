@@ -17,7 +17,9 @@ function findingFingerprint(finding: ComparableFinding): string {
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([key, value]) => `${key}:${value}`)
     .join("|");
-  return [finding.rule_id, finding.category, finding.title, operands].join("::");
+  return [finding.rule_id, finding.category, finding.title, operands].join(
+    "::",
+  );
 }
 
 export function compareFindings(

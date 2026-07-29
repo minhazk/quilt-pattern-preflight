@@ -52,7 +52,9 @@ export default async function DashboardLayout({
       <div className="app-main">
         <header className="app-topbar">
           <span>{user.sample ? "Local sample account" : user.email}</span>
-          <span className="avatar" aria-label="Account menu">{initials}</span>
+          <span className="avatar" aria-label="Account menu">
+            {initials}
+          </span>
         </header>
         {children}
       </div>

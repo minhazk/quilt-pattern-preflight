@@ -211,7 +211,12 @@ export default async function OperatorProjectPage({
             <textarea name="note" />
           </label>
           <div className="operator-buttons">
-            <button className="button" name="action" value="start" type="submit">
+            <button
+              className="button"
+              name="action"
+              value="start"
+              type="submit"
+            >
               Start review
             </button>
             <button

@@ -3,10 +3,7 @@ import Link from "next/link";
 import { FindingCard } from "@/components/finding-card";
 import { EventBeacon } from "@/components/event-beacon";
 import { Logo } from "@/components/logo";
-import {
-  sampleAssumptions,
-  sampleFindings,
-} from "@/data/sample-report";
+import { sampleAssumptions, sampleFindings } from "@/data/sample-report";
 
 export const metadata: Metadata = {
   title: "Sample source-linked report",
@@ -30,7 +27,10 @@ export default function DemoPage() {
             >
               Download PDF
             </a>
-            <Link className="button button-small button-primary" href="/auth/sign-in">
+            <Link
+              className="button button-small button-primary"
+              href="/auth/sign-in"
+            >
               Start a preflight
             </Link>
           </div>
@@ -41,9 +41,7 @@ export default function DemoPage() {
           <div>
             <p className="eyebrow">Operator-reviewed example</p>
             <h1>Meadow Lines Throw</h1>
-            <p>
-              Synthetic fixture · Version 1 · Processed 29 July 2026
-            </p>
+            <p>Synthetic fixture · Version 1 · Processed 29 July 2026</p>
           </div>
           <div className="report-badge">
             <span>Demo result</span>
@@ -82,10 +80,22 @@ export default function DemoPage() {
               </p>
             </div>
             <div className="severity-counts">
-              <div><strong>1</strong><span>Critical</span></div>
-              <div><strong>1</strong><span>Warning</span></div>
-              <div><strong>0</strong><span>Review</span></div>
-              <div><strong>1</strong><span>Information</span></div>
+              <div>
+                <strong>1</strong>
+                <span>Critical</span>
+              </div>
+              <div>
+                <strong>1</strong>
+                <span>Warning</span>
+              </div>
+              <div>
+                <strong>0</strong>
+                <span>Review</span>
+              </div>
+              <div>
+                <strong>1</strong>
+                <span>Information</span>
+              </div>
             </div>
           </section>
 
@@ -96,7 +106,10 @@ export default function DemoPage() {
             </div>
             <dl>
               {sampleAssumptions.map(([label, value]) => (
-                <div key={label}><dt>{label}</dt><dd>{value}</dd></div>
+                <div key={label}>
+                  <dt>{label}</dt>
+                  <dd>{value}</dd>
+                </div>
               ))}
             </dl>
           </section>
@@ -114,8 +127,8 @@ export default function DemoPage() {
               The demonstration checked confirmed piece totals, declared
               finished/unfinished relationships, and explicit unsupported
               construction markers. It did not assess diagrams, prose quality,
-              sewing order, template geometry, artistic choices, legal issues
-              or construction practicality.
+              sewing order, template geometry, artistic choices, legal issues or
+              construction practicality.
             </p>
             <strong>
               Quilt Pattern Preflight does not replace professional technical

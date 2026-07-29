@@ -167,7 +167,9 @@ export async function renderApprovedReport(payload: {
     cache: "no-store",
   });
   if (!response.ok) {
-    throw new Error(`Report renderer rejected the snapshot (${response.status})`);
+    throw new Error(
+      `Report renderer rejected the snapshot (${response.status})`,
+    );
   }
   return response.arrayBuffer();
 }

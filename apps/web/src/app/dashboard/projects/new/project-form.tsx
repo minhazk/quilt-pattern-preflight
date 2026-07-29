@@ -36,7 +36,12 @@ export function NewProjectForm() {
           <p className="eyebrow">Name the work</p>
           <h2>Create a private project</h2>
           <label htmlFor="title">Pattern title</label>
-          <input id="title" name="title" placeholder="Meadow Lines Throw" required />
+          <input
+            id="title"
+            name="title"
+            placeholder="Meadow Lines Throw"
+            required
+          />
           <label htmlFor="source">How did you hear about the pilot?</label>
           <select id="source" name="source" defaultValue="direct_email">
             <option value="direct_email">Direct email</option>
@@ -99,11 +104,23 @@ export function NewProjectForm() {
             </label>
             <label>
               Block rows
-              <input name="blockRows" defaultValue="1" type="number" min="1" required />
+              <input
+                name="blockRows"
+                defaultValue="1"
+                type="number"
+                min="1"
+                required
+              />
             </label>
             <label>
               Block columns
-              <input name="blockColumns" defaultValue="1" type="number" min="1" required />
+              <input
+                name="blockColumns"
+                defaultValue="1"
+                type="number"
+                min="1"
+                required
+              />
             </label>
           </div>
           <fieldset>
@@ -147,8 +164,8 @@ export function NewProjectForm() {
           <h2>Upload and extract proposed values</h2>
           <p>
             The original file is stored privately. Extraction validates the
-            document structure and creates source-linked proposed values for
-            you to confirm. Your credit is not consumed yet.
+            document structure and creates source-linked proposed values for you
+            to confirm. Your credit is not consumed yet.
           </p>
           <div className="submit-summary">
             <div>
