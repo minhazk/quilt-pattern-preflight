@@ -1,0 +1,102 @@
+{
+  "fixture": "17-sparrow_yield.pdf",
+  "description": "Original synthetic validation fixture.",
+  "canonical_model": {
+    "schema_version": "1.0.0",
+    "project_id": "00000000-0000-0000-0000-000000000011",
+    "document_version": 1,
+    "title": "Sparrow Yield",
+    "assumptions": {
+      "version": 1,
+      "measurement_system": "imperial",
+      "seam_allowance": "1/4",
+      "usable_wof": "40",
+      "fabric_rounding_increment": "1/8",
+      "default_measurement_state": "mixed",
+      "block_rows": 1,
+      "block_columns": 5,
+      "waste_included": false,
+      "extra_pieces_deliberate": false,
+      "strip_piecing": true,
+      "sashing_used": false,
+      "borders_used": false,
+      "complete_cutting_tables": true,
+      "construction_flags": []
+    },
+    "fabrics": [
+      {
+        "name": "Background",
+        "stated_requirement": "3/8",
+        "required_strip_count": 5,
+        "strip_cut_width": "2 1/2",
+        "allowance": "0",
+        "sources": [
+          {
+            "page": 2,
+            "section": "Fabric requirements",
+            "excerpt": "Background: 3/8 yard for five 2 1/2 inch WOF strips."
+          }
+        ],
+        "confirmed": true
+      }
+    ],
+    "pieces": [
+      {
+        "name": "Background rectangle",
+        "fabric_name": "Background",
+        "cut_width": "2 1/2",
+        "cut_height": "4 1/2",
+        "finished_width": "2",
+        "finished_height": "4",
+        "quantity_per_block": 8,
+        "stated_total_quantity": 48,
+        "extra_quantity": 0,
+        "subcut_length": "4 1/2",
+        "stated_strip_count": 5,
+        "sources": [
+          {
+            "page": 3,
+            "section": "Cutting",
+            "excerpt": "Cut (40) Background rectangles 2 1/2 x 4 1/2 inches."
+          }
+        ],
+        "confirmed": true
+      }
+    ],
+    "blocks": [
+      {
+        "name": "Meadow block",
+        "finished_width": "12",
+        "finished_height": "12",
+        "quantity": 5,
+        "grid_rows": 1,
+        "grid_columns": 5,
+        "stated_quilt_width": "60",
+        "stated_quilt_height": "12",
+        "vertical_sashing_total": "0",
+        "horizontal_sashing_total": "0",
+        "border_width_total": "0",
+        "border_height_total": "0",
+        "sources": [
+          {
+            "page": 5,
+            "section": "Assembly",
+            "excerpt": "Arrange five 12 inch finished blocks in one row."
+          }
+        ],
+        "confirmed": true
+      }
+    ],
+    "used_piece_names": [
+      "Background rectangle"
+    ]
+  },
+  "deliberate_error_rules": [
+    "STRIP_YIELD"
+  ],
+  "expected_findings": [
+    "STRIP_YIELD"
+  ],
+  "expected_non_findings": [],
+  "unsupported_scope_annotations": []
+}

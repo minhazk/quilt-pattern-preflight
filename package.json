@@ -8,10 +8,14 @@
   },
   "scripts": {
     "dev": "pnpm --filter @preflight/web dev",
+    "dev:service": ".venv/bin/python -m uvicorn preflight_service.api:app --reload --port 8000",
     "build": "pnpm --filter @preflight/contracts build && pnpm --filter @preflight/web build",
-    "lint": "pnpm -r --if-present lint",
-    "typecheck": "pnpm -r --if-present typecheck",
-    "test": "pnpm -r --if-present test",
+    "lint": "pnpm -r --if-present lint && .venv/bin/python -m ruff check services/preflight fixtures/generate_corpus.py",
+    "typecheck": "pnpm -r --if-present typecheck && .venv/bin/python -m mypy --config-file services/preflight/pyproject.toml services/preflight/src",
+    "test:js": "pnpm -r --if-present test",
+    "test:service": ".venv/bin/python -m pytest services/preflight/tests --cov=preflight_service --cov-report=term-missing",
+    "test": "pnpm test:js && pnpm test:service",
+    "fixtures": ".venv/bin/python fixtures/generate_corpus.py",
     "check": "pnpm lint && pnpm typecheck && pnpm test && pnpm build",
     "format": "prettier --write .",
     "format:check": "prettier --check ."

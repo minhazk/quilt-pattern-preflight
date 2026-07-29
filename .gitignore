@@ -10,9 +10,14 @@ test-results
 .venv
 __pycache__
 .pytest_cache
+.hypothesis/
+.coverage
 *.pyc
 *.log
 .DS_Store
 uploads/
 reports/
 .supabase/
+.pnpm-store/
+*.tsbuildinfo
+tmp/

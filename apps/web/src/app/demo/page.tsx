@@ -21,6 +21,13 @@ export default function DemoPage() {
           <Logo />
           <div>
             <span>Free synthetic demonstration</span>
+            <a
+              className="text-link"
+              href="/sample-preflight-report.pdf"
+              download
+            >
+              Download PDF
+            </a>
             <Link className="button button-small button-primary" href="/auth/sign-in">
               Start a preflight
             </Link>

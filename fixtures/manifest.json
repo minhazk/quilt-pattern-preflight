@@ -1,0 +1,179 @@
+[
+  {
+    "fixture": "01-meadow_count.docx",
+    "golden": "01-meadow_count.json",
+    "format": "docx",
+    "layout": "paragraph-heavy",
+    "expected_findings": [
+      "PIECE_COUNT_RECONCILIATION"
+    ]
+  },
+  {
+    "fixture": "02-cedar_finish.docx",
+    "golden": "02-cedar_finish.json",
+    "format": "docx",
+    "layout": "paragraph-heavy",
+    "expected_findings": [
+      "FINISHED_UNFINISHED_RELATIONSHIP"
+    ]
+  },
+  {
+    "fixture": "03-harbour_strips.docx",
+    "golden": "03-harbour_strips.json",
+    "format": "docx",
+    "layout": "paragraph-heavy",
+    "expected_findings": [
+      "STRIP_YIELD"
+    ]
+  },
+  {
+    "fixture": "04-orchard_yardage.docx",
+    "golden": "04-orchard_yardage.json",
+    "format": "docx",
+    "layout": "paragraph-heavy",
+    "expected_findings": [
+      "FABRIC_REQUIREMENT"
+    ]
+  },
+  {
+    "fixture": "05-lantern_grid.docx",
+    "golden": "05-lantern_grid.json",
+    "format": "docx",
+    "layout": "paragraph-heavy",
+    "expected_findings": [
+      "GRID_DIMENSIONS"
+    ]
+  },
+  {
+    "fixture": "06-fern_duplicate.docx",
+    "golden": "06-fern_duplicate.json",
+    "format": "docx",
+    "layout": "paragraph-heavy",
+    "expected_findings": [
+      "DATA_CONSISTENCY"
+    ]
+  },
+  {
+    "fixture": "07-river_missing_size.docx",
+    "golden": "07-river_missing_size.json",
+    "format": "docx",
+    "layout": "table-heavy",
+    "expected_findings": [
+      "DATA_CONSISTENCY"
+    ]
+  },
+  {
+    "fixture": "08-stone_missing_cut.docx",
+    "golden": "08-stone_missing_cut.json",
+    "format": "docx",
+    "layout": "table-heavy",
+    "expected_findings": [
+      "COMPLETENESS"
+    ]
+  },
+  {
+    "fixture": "09-willow_curve.docx",
+    "golden": "09-willow_curve.json",
+    "format": "docx",
+    "layout": "table-heavy",
+    "expected_findings": [
+      "UNSUPPORTED_CONSTRUCTION"
+    ]
+  },
+  {
+    "fixture": "10-poppy_extras.docx",
+    "golden": "10-poppy_extras.json",
+    "format": "docx",
+    "layout": "table-heavy",
+    "expected_findings": []
+  },
+  {
+    "fixture": "11-bramble_review.docx",
+    "golden": "11-bramble_review.json",
+    "format": "docx",
+    "layout": "table-heavy",
+    "expected_findings": [
+      "PIECE_COUNT_RECONCILIATION",
+      "FINISHED_UNFINISHED_RELATIONSHIP"
+    ]
+  },
+  {
+    "fixture": "12-quiet_cabin.docx",
+    "golden": "12-quiet_cabin.json",
+    "format": "docx",
+    "layout": "table-heavy",
+    "expected_findings": []
+  },
+  {
+    "fixture": "13-border_path.pdf",
+    "golden": "13-border_path.json",
+    "format": "pdf",
+    "layout": "simple",
+    "expected_findings": [
+      "GRID_DIMENSIONS"
+    ]
+  },
+  {
+    "fixture": "14-aster_applique.pdf",
+    "golden": "14-aster_applique.json",
+    "format": "pdf",
+    "layout": "simple",
+    "expected_findings": [
+      "UNSUPPORTED_CONSTRUCTION"
+    ]
+  },
+  {
+    "fixture": "15-north_block.pdf",
+    "golden": "15-north_block.json",
+    "format": "pdf",
+    "layout": "simple",
+    "expected_findings": [
+      "PIECE_COUNT_RECONCILIATION"
+    ]
+  },
+  {
+    "fixture": "16-fraction_field.pdf",
+    "golden": "16-fraction_field.json",
+    "format": "pdf",
+    "layout": "simple",
+    "expected_findings": []
+  },
+  {
+    "fixture": "17-sparrow_yield.pdf",
+    "golden": "17-sparrow_yield.json",
+    "format": "pdf",
+    "layout": "simple",
+    "expected_findings": [
+      "STRIP_YIELD"
+    ]
+  },
+  {
+    "fixture": "18-amber_pages.pdf",
+    "golden": "18-amber_pages.json",
+    "format": "pdf",
+    "layout": "multi-page",
+    "expected_findings": [
+      "PIECE_COUNT_RECONCILIATION",
+      "FABRIC_REQUIREMENT"
+    ]
+  },
+  {
+    "fixture": "19-pine_conflict.pdf",
+    "golden": "19-pine_conflict.json",
+    "format": "pdf",
+    "layout": "multi-page",
+    "expected_findings": [
+      "DATA_CONSISTENCY"
+    ]
+  },
+  {
+    "fixture": "20-thistle_scope.pdf",
+    "golden": "20-thistle_scope.json",
+    "format": "pdf",
+    "layout": "multi-page",
+    "expected_findings": [
+      "COMPLETENESS",
+      "UNSUPPORTED_CONSTRUCTION"
+    ]
+  }
+]
