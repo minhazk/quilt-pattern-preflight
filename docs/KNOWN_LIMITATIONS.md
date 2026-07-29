@@ -1,8 +1,9 @@
 # Known limitations
 
 - This is an operator-assisted paid pilot, not autonomous production software.
-- The initial migration has static review and CI coverage but could not be run
-  locally on the build Mac because Docker/Podman was absent.
+- The initial migration, database lint and RLS isolation tests pass against a
+  clean Postgres 17 service in CI, but could not be run locally on the build Mac
+  because Docker/Podman was absent.
 - Stripe account credentials were unavailable, so signed test checkout and
   replay are implemented/tested at boundaries but not exercised against the
   founder’s Stripe account.

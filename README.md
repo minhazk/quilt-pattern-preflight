@@ -129,7 +129,9 @@ health checks, secrets and rollback boundaries are in
 ## Product status
 
 This repository implements an **operator-assisted paid pilot**. External
-credentials, a Docker-backed migration run, Stripe test-mode end-to-end
-fulfilment, email delivery, and production deployment must be verified in the
-target accounts before accepting live payments. See
+credentials, migration into the target Supabase project, Stripe test-mode
+end-to-end fulfilment, email delivery, and production deployment must be
+verified in the target accounts before accepting live payments. The migration,
+database lint and RLS isolation tests run against a clean Postgres 17 service in
+CI. See
 [docs/KNOWN_LIMITATIONS.md](docs/KNOWN_LIMITATIONS.md).
